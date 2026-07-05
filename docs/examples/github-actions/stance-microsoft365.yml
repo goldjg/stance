@@ -1,4 +1,4 @@
-# Example only: workflows in .github/workflows/examples are not active in this repository.
+# Documentation example only.
 # Copy this file to .github/workflows/ in your own repository to enable it.
 name: example-stance-microsoft365
 
@@ -62,3 +62,4 @@ jobs:
             ${{ steps.stance.outputs.results-path }}
             ${{ steps.stance.outputs.html-path }}
             ${{ steps.stance.outputs.sarif-path }}
+

@@ -16,6 +16,11 @@ This is the initial implementation:
 
 Released-binary install mode is planned but not included in this version.
 
+Reference example workflow files:
+
+- `docs/examples/github-actions/stance-microsoft365.yml`
+- `docs/examples/github-actions/stance-facts-only.yml`
+
 ## Inputs
 
 | Input | Default | Description |

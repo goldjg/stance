@@ -5,7 +5,7 @@ Add initial GitHub Action packaging and documentation for STANCE.
 
 ## Included
 - Add root `action.yml` composite action for STANCE local-build execution.
-- Add example workflows under `.github/workflows/examples/`:
+- Add example workflows under `docs/examples/github-actions/`:
   - `stance-microsoft365.yml`
   - `stance-facts-only.yml`
 - Add `docs/github-action.md` with action contract and usage guidance.

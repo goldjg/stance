@@ -1,4 +1,4 @@
-# Example only: workflows in .github/workflows/examples are not active in this repository.
+# Documentation example only.
 # Copy this file to .github/workflows/ in your own repository to enable it.
 name: example-stance-facts-only
 

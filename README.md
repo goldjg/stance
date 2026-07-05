@@ -120,6 +120,9 @@ STANCE now includes an initial composite GitHub Action wrapper at repository
 root (`action.yml`) that builds STANCE locally from checked-out source.
 
 - Documentation: [docs/github-action.md](docs/github-action.md)
+- Example workflow files:
+  - `docs/examples/github-actions/stance-microsoft365.yml`
+  - `docs/examples/github-actions/stance-facts-only.yml`
 - Current mode: local build only (`stance-version: local`)
 - Planned: released-binary action install mode
 
