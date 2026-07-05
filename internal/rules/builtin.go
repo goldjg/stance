@@ -48,13 +48,13 @@ func BuiltinConditionalAccessRules() []Rule {
 		},
 		{
 			ID:                  "ENTRA-CA-005",
-			Title:               "Emergency access exclusions are present for privileged-role Conditional Access policies",
-			Severity:            SeverityHigh,
+			Title:               "Privileged-role Conditional Access policies have user exclusions configured (informational)",
+			Severity:            SeverityLow,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},
 			DataRequirements:    []string{"conditional_access_policies"},
-			Remediation:         "Define and maintain emergency access exclusions for privileged-role-targeted policies.",
+			Remediation:         "Review user exclusions and validate emergency-access intent out of band. Excluded users alone do not prove break-glass coverage.",
 			References:          []string{"https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access"},
 		},
 	}

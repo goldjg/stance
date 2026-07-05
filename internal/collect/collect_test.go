@@ -39,6 +39,9 @@ func TestMapCAPolicyFromFixture(t *testing.T) {
 	if len(fact.BuiltInControls) != 1 || fact.BuiltInControls[0] != "mfa" {
 		t.Fatalf("unexpected controls: %+v", fact)
 	}
+	if fact.AuthenticationStrength != "Multifactor authentication" {
+		t.Fatalf("expected authentication strength to map from grantControls, got: %+v", fact)
+	}
 }
 
 func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {

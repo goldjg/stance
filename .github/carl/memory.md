@@ -30,4 +30,5 @@
 - `stance collect` produces a normalized fact bundle (organization + conditional access) for local evaluation.
 - `stance check` evaluates built-in CA posture rules from facts without live API calls.
 - `stance explain --check <id>` returns machine-readable metadata for implemented checks.
-- High-signal CA rules include privileged-role targeting, MFA enforcement gaps, and emergency access exclusion gaps.
+- CA authentication strength evidence is mapped from `grantControls.authenticationStrength` (not `sessionControls`).
+- Excluded users in CA policies are treated as informational-only evidence and do not prove emergency-access coverage.

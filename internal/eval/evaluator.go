@@ -33,7 +33,7 @@ func EvaluateDefault(bundle facts.Bundle) Result {
 	reportOnly := make([]string, 0)
 	privilegedPolicies := make([]string, 0)
 	privilegedWithoutMFA := make([]string, 0)
-	privilegedWithoutEmergencyExclusion := make([]string, 0)
+	privilegedWithUserExclusions := make([]string, 0)
 
 	for _, policy := range bundle.CAPolicies {
 		switch policy.State {
@@ -47,8 +47,8 @@ func EvaluateDefault(bundle facts.Bundle) Result {
 			if !hasMFAControl(policy) {
 				privilegedWithoutMFA = append(privilegedWithoutMFA, policy.DisplayName)
 			}
-			if len(policy.ExcludedUsers) == 0 {
-				privilegedWithoutEmergencyExclusion = append(privilegedWithoutEmergencyExclusion, policy.DisplayName)
+			if len(policy.ExcludedUsers) > 0 {
+				privilegedWithUserExclusions = append(privilegedWithUserExclusions, policy.DisplayName)
 			}
 		}
 	}
@@ -91,11 +91,11 @@ func EvaluateDefault(bundle facts.Bundle) Result {
 
 	findings = append(findings, Finding{
 		RuleID:       "ENTRA-CA-005",
-		Title:        "Emergency access exclusions are present for privileged-role Conditional Access policies",
-		Severity:     rules.SeverityHigh,
-		Status:       toStatus(len(privilegedWithoutEmergencyExclusion) > 0),
-		Summary:      summarize("privileged policies without emergency-access exclusion", privilegedWithoutEmergencyExclusion),
-		MatchedItems: privilegedWithoutEmergencyExclusion,
+		Title:        "Privileged-role Conditional Access policies have user exclusions configured (informational)",
+		Severity:     rules.SeverityLow,
+		Status:       StatusInfo,
+		Summary:      summarizeUserExclusions(privilegedWithUserExclusions),
+		MatchedItems: privilegedWithUserExclusions,
 	})
 
 	return Result{Findings: findings}
@@ -129,4 +129,11 @@ func hasMFAControl(policy facts.CAPolicyFact) bool {
 		}
 	}
 	return policy.AuthenticationStrength != ""
+}
+
+func summarizeUserExclusions(matches []string) string {
+	if len(matches) == 0 {
+		return "No user exclusions were observed on privileged-role-targeted policies. This does not determine emergency-access correctness."
+	}
+	return "Observed user exclusions on privileged-role-targeted policies. This is not proof of emergency-access coverage."
 }

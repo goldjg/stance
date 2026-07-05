@@ -15,7 +15,8 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 
 - Entra ID and Conditional Access only.
 - Read-only posture assessment.
-- Output formats: JSON, Markdown summary, JUnit XML, SARIF.
+- Current check output formats: JSON, Markdown summary, JUnit XML.
+- Planned output: SARIF.
 
 ## Hard constraints
 
@@ -46,6 +47,8 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 - `stance explain`
 - `stance permissions`
 - `stance report`
+
+`stance report` is planned and not yet implemented as a standalone conversion command.
 
 ## Status
 
@@ -96,4 +99,4 @@ Additional implemented checks:
 
 - `ENTRA-CA-003` privileged-role-targeted Conditional Access policies identified.
 - `ENTRA-CA-004` privileged-role-targeted policies missing MFA/auth strength enforcement.
-- `ENTRA-CA-005` privileged-role-targeted policies missing emergency access exclusions.
+- `ENTRA-CA-005` privileged-role-targeted policies with user exclusions observed (informational only; not proof of emergency access coverage).

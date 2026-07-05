@@ -13,9 +13,7 @@
     }
   },
   "grantControls": {
-    "builtInControls": ["mfa"]
-  },
-  "sessionControls": {
+    "builtInControls": ["mfa"],
     "authenticationStrength": {
       "displayName": "Multifactor authentication"
     }

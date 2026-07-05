@@ -85,13 +85,11 @@ func mapCAPolicy(raw json.RawMessage) (facts.CAPolicyFact, error) {
 			} `json:"users"`
 		} `json:"conditions"`
 		GrantControls struct {
-			BuiltInControls []string `json:"builtInControls"`
-		} `json:"grantControls"`
-		SessionControls struct {
+			BuiltInControls        []string `json:"builtInControls"`
 			AuthenticationStrength struct {
 				DisplayName string `json:"displayName"`
 			} `json:"authenticationStrength"`
-		} `json:"sessionControls"`
+		} `json:"grantControls"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return facts.CAPolicyFact{}, err
@@ -108,6 +106,6 @@ func mapCAPolicy(raw json.RawMessage) (facts.CAPolicyFact, error) {
 		IncludedRoles:          payload.Conditions.Users.IncludeRoles,
 		ExcludedRoles:          payload.Conditions.Users.ExcludeRoles,
 		BuiltInControls:        payload.GrantControls.BuiltInControls,
-		AuthenticationStrength: payload.SessionControls.AuthenticationStrength.DisplayName,
+		AuthenticationStrength: payload.GrantControls.AuthenticationStrength.DisplayName,
 	}, nil
 }
