@@ -12,6 +12,7 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Core architecture is provider-neutral under `internal/core/*`.
 - Microsoft 365 implementation lives under `internal/provider/microsoft365/*`.
 - Current coverage is Entra Conditional Access plus Entra directory role definition/assignment collection and direct privileged-principal group membership collection with collect-once/evaluate-locally behavior.
+- Direct privileged-principal group correlation now tracks per-principal direct-group resolution status so failed/unknown lookups are surfaced as evidence limitations instead of being indistinguishable from no direct groups observed.
 - Existing check outputs are JSON, Markdown, JUnit, HTML, and SARIF.
 - Durable result JSON includes machine-readable structured finding details for privileged-principal Conditional Access evidence (`ENTRA-CA-006/007/008`) to improve CI/system handoff.
 

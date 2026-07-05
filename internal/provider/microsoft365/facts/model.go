@@ -14,6 +14,7 @@ type Bundle struct {
 	DirectoryRoleAssignments  []DirectoryRoleAssignment  `json:"directory_role_assignments"`
 	PrivilegedPrincipals      []PrivilegedPrincipal      `json:"privileged_principals"`
 	PrincipalGroupMemberships []PrincipalGroupMembership `json:"principal_group_memberships"`
+	PrincipalGroupResolutions []PrincipalGroupResolution `json:"principal_group_resolutions"`
 }
 
 func NewBundle() Bundle {
@@ -54,6 +55,9 @@ func (b *Bundle) ensureDefaults() {
 	}
 	if b.PrincipalGroupMemberships == nil {
 		b.PrincipalGroupMemberships = make([]PrincipalGroupMembership, 0)
+	}
+	if b.PrincipalGroupResolutions == nil {
+		b.PrincipalGroupResolutions = make([]PrincipalGroupResolution, 0)
 	}
 }
 
@@ -112,5 +116,15 @@ type PrincipalGroupMembership struct {
 	GroupID          string `json:"group_id"`
 	GroupDisplayName string `json:"group_display_name,omitempty"`
 	GroupType        string `json:"group_type,omitempty"`
+	Source           string `json:"source"`
+}
+
+type PrincipalGroupResolution struct {
+	PrincipalID      string `json:"principal_id"`
+	PrincipalType    string `json:"principal_type,omitempty"`
+	Resolved         bool   `json:"resolved"`
+	DirectGroupCount int    `json:"direct_group_count"`
+	ErrorKind        string `json:"error_kind,omitempty"`
+	ErrorMessage     string `json:"error_message,omitempty"`
 	Source           string `json:"source"`
 }

@@ -68,6 +68,9 @@
 - ENTRA role visibility checks are informational/cautious and do not claim emergency-access or break-glass pass/fail outcomes.
 - STANCE now derives cautious privileged-principal Conditional Access coverage/exclusion/unknown evidence from existing CA policy and role-assignment facts.
 - Privileged-principal CA evidence can now use direct principal group membership to correlate group-targeted include/exclude policy evidence.
+- STANCE now records direct group membership resolution status for privileged principals.
+- Failed direct group membership lookup is captured as explicit evidence/limitation instead of being silently indistinguishable from no direct groups.
+- Privileged-principal CA evidence now uses direct-group resolution status to avoid overclaiming group-targeted coverage/exclusion.
 - Privileged-principal CA coverage evidence is visibility-only and not proof of complete effective coverage.
 - Privileged-principal CA exclusion evidence distinguishes direct principal-level matches from possible-only evidence when principal-level proof is unavailable.
 - Nested groups, transitive group membership expansion, dynamic group rules, emergency-access designation, and full Conditional Access What-If simulation remain future work.

@@ -119,4 +119,10 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 	if len(bundle.PrincipalGroupMemberships) != 1 {
 		t.Fatalf("expected 1 principal group membership, got %d", len(bundle.PrincipalGroupMemberships))
 	}
+	if len(bundle.PrincipalGroupResolutions) != 1 {
+		t.Fatalf("expected 1 principal group resolution status, got %d", len(bundle.PrincipalGroupResolutions))
+	}
+	if !bundle.PrincipalGroupResolutions[0].Resolved || bundle.PrincipalGroupResolutions[0].DirectGroupCount != 1 {
+		t.Fatalf("expected resolved direct group status with count 1, got %+v", bundle.PrincipalGroupResolutions[0])
+	}
 }

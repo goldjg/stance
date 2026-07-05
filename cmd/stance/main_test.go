@@ -102,6 +102,10 @@ func TestRunCheckJSONIncludesPrivilegedCAEvidenceDetails(t *testing.T) {
   "privileged_principals":[
     {"principal_id":"principal-1","principal_type":"user","display_name":"Alice","user_principal_name":"alice@example.com","role_definition_ids":["role-1"],"role_display_names":["Global Administrator"]},
     {"principal_id":"principal-2","principal_type":"user","display_name":"Bob","user_principal_name":"bob@example.com","role_definition_ids":["role-2"],"role_display_names":["Privileged Role Administrator"]}
+  ],
+  "principal_group_resolutions":[
+    {"principal_id":"principal-1","principal_type":"user","resolved":false,"direct_group_count":0,"error_kind":"graph_error","error_message":"graph returned status 403","source":"graph:/v1.0/directoryObjects/principal-1/memberOf"},
+    {"principal_id":"principal-2","principal_type":"user","resolved":true,"direct_group_count":0,"source":"graph:/v1.0/directoryObjects/principal-2/memberOf"}
   ]
 }`
 	if err := os.WriteFile(factsPath, []byte(factsPayload), 0o600); err != nil {
@@ -154,6 +158,28 @@ func TestRunCheckJSONIncludesPrivilegedCAEvidenceDetails(t *testing.T) {
 		}
 		if _, ok := evidence["principals"].([]any); !ok {
 			t.Fatalf("expected principals array on %s, got %#v", ruleID, evidence["principals"])
+		}
+		principals := evidence["principals"].([]any)
+		if len(principals) == 0 {
+			t.Fatalf("expected principal details on %s", ruleID)
+		}
+		firstPrincipal, ok := principals[0].(map[string]any)
+		if !ok {
+			t.Fatalf("expected principal detail object on %s, got %#v", ruleID, principals[0])
+		}
+		if _, ok := firstPrincipal["group_resolution_status"]; !ok {
+			t.Fatalf("expected group_resolution_status on %s principal details", ruleID)
+		}
+		if _, ok := firstPrincipal["direct_group_count"]; !ok {
+			t.Fatalf("expected direct_group_count on %s principal details", ruleID)
+		}
+		if firstPrincipal["principal_id"] == "principal-1" {
+			if firstPrincipal["group_resolution_error_kind"] != "graph_error" {
+				t.Fatalf("expected group_resolution_error_kind on %s principal-1 details, got %#v", ruleID, firstPrincipal["group_resolution_error_kind"])
+			}
+			if firstPrincipal["group_resolution_error_message"] != "graph returned status 403" {
+				t.Fatalf("expected group_resolution_error_message on %s principal-1 details, got %#v", ruleID, firstPrincipal["group_resolution_error_message"])
+			}
 		}
 	}
 	if found != 3 {

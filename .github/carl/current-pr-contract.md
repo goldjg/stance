@@ -1,15 +1,18 @@
 # Current PR contract
 
 ## PR focus
-Add direct privileged-principal group membership facts and use them to improve cautious privileged-principal Conditional Access evidence.
+Add direct group membership resolution status for privileged principals to improve cautious privileged-principal Conditional Access evidence quality.
 
 ## Included
-- Add direct principal group membership fact model (`principal_group_memberships`) under Microsoft 365 provider facts.
-- Add direct Graph collection for privileged principals using `directoryObjects/{id}/memberOf` (direct membership only).
-- Reuse existing Conditional Access policy group targeting fields and correlate include/exclude group targets using direct membership evidence.
-- Enhance privileged CA machine-readable details (`ENTRA-CA-006/007/008`) with deterministic direct group context:
-  - `direct_group_ids`
-  - `direct_group_display_names`
+- Add direct principal group resolution status fact model (`principal_group_resolutions`) under Microsoft 365 provider facts.
+- Record per-principal direct group resolution success/failure during privileged principal direct group collection.
+- Reuse existing Conditional Access policy group targeting fields and correlate include/exclude group targets using direct membership evidence without overclaiming when resolution failed/unknown.
+- Enhance privileged CA machine-readable details (`ENTRA-CA-006/007/008`) with deterministic direct group resolution context:
+  - `group_resolution_status`
+  - `direct_group_count`
+  - `group_resolution_error_kind` (when failed)
+  - `group_resolution_error_message` (when failed)
+  - existing `direct_group_ids` and `direct_group_display_names`
 - Keep check/report compatibility across JSON, Markdown, HTML, JUnit, and SARIF outputs.
 - Add/adjust tests for fact defaults, collector mapping/continuation, direct-group evidence correlation, and output compatibility.
 - Update docs and governance artifacts:
