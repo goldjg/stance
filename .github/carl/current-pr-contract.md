@@ -1,28 +1,38 @@
 # Current PR contract
 
 ## PR focus
-Improve GitHub Action live-collection auth ergonomics with action-native GitHub OIDC assertion acquisition.
+Add released-binary install mode support to the STANCE GitHub Action.
 
 ## Included
-- Update root `action.yml` auth inputs and mode handling (`env`, `github-oidc`).
-- Add action-native GitHub OIDC assertion acquisition for live collection and export to `STANCE_CLIENT_ASSERTION`.
-- Preserve facts-only behavior and existing env-driven auth behavior.
+- Update root `action.yml` install behavior for:
+  - `stance-version: local` (unchanged local build behavior)
+  - `stance-version: latest` (latest release resolution + install)
+  - `stance-version: vX.Y.Z` (pinned release install)
+- Enforce checksum verification for released-binary mode:
+  - download selected archive + `checksums.txt`
+  - require archive entry in checksums
+  - fail on missing or mismatched SHA-256
+- Preserve action auth and runtime behavior:
+  - facts-only remains auth-free
+  - `auth-mode: env` remains supported
+  - `auth-mode: github-oidc` remains supported
+  - collect/check/report flow remains unchanged after binary install
 - Update docs/examples:
-  - `docs/examples/github-actions/stance-microsoft365.yml`
   - `docs/github-action.md`
-- Update `README.md` GitHub Action section and docs link.
-- Update `docs/maester-parity.md` parity status wording for GitHub Action/OIDC progress.
-- Update `.github/carl/memory.md` with durable OIDC/auth truths.
-- Update this PR contract for focused scope and exclusions.
+  - `docs/examples/github-actions/stance-microsoft365.yml`
+  - `docs/examples/github-actions/stance-facts-only.yml`
+- Update `README.md` GitHub Action section and docs link/guidance.
+- Update `docs/maester-parity.md` CI/CD and action-integration progress wording.
+- Update `.github/carl/memory.md` with durable install/auth truths.
+- Keep this contract aligned with final scope.
 
 ## Excluded
-- Entra app/service principal provisioning and federated credential creation.
 - New Microsoft API collectors.
 - New posture checks.
 - New providers.
-- Released binary install mode in the action.
-- `fail-on-findings` behavior wiring if not already present.
-- Release pipeline implementation changes (except documentation references).
+- Entra app/service principal provisioning and federated credential creation.
+- `fail-on-findings` behavior implementation.
+- Release workflow/pipeline implementation changes (except strictly necessary naming docs alignment).
 
 ## Guardrails
 - Keep STANCE runtime 100% Go.
@@ -36,4 +46,4 @@ Improve GitHub Action live-collection auth ergonomics with action-native GitHub 
 - `gofmt -l .` clean.
 - `go test ./...`.
 - `go vet ./...`.
-- Manual review of `action.yml` and example workflow correctness.
+- Manual review of `action.yml` install/auth behavior and docs/example correctness.

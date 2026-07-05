@@ -10,7 +10,7 @@ permissions:
   security-events: write
 
 jobs:
-  posture-from-facts:
+  posture-from-facts-local:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,10 +21,11 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Run STANCE (facts only)
+      - name: Run STANCE (facts only, local source)
         id: stance
         uses: ./
         with:
+          stance-version: local
           provider: microsoft365
           suite: entra
           facts-path: examples/facts/sample-facts.json
@@ -41,6 +42,35 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stance-results-facts-only
+          path: |
+            ${{ steps.stance.outputs.results-path }}
+            ${{ steps.stance.outputs.html-path }}
+            ${{ steps.stance.outputs.sarif-path }}
+
+  posture-from-facts-external-pinned:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run STANCE (facts only, external pinned release)
+        id: stance
+        uses: goldjg/stance@v0.1.0 # Example tag placeholder; pin to a real release tag.
+        with:
+          stance-version: v0.1.0
+          provider: microsoft365
+          suite: entra
+          facts-path: examples/facts/sample-facts.json
+          formats: json,html,sarif
+          output-directory: stance-results
+
+      - name: Upload SARIF
+        if: ${{ steps.stance.outputs.sarif-path != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.stance.outputs.sarif-path }}
+
+      - name: Upload STANCE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stance-results-facts-only-external
           path: |
             ${{ steps.stance.outputs.results-path }}
             ${{ steps.stance.outputs.html-path }}

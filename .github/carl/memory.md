@@ -61,3 +61,8 @@
 - SARIF upload is supported by generating `stance.sarif` and uploading through `github/codeql-action/upload-sarif`.
 - Facts-only mode remains auth-free.
 - This GitHub Action OIDC ergonomics PR adds no new Microsoft collectors, no new posture checks, and no new providers.
+- The GitHub Action supports `stance-version: local`, `latest`, and explicit `vX.Y.Z` tags.
+- Released-binary action mode downloads GitHub Release archives and verifies SHA-256 against release `checksums.txt` before extraction/execution.
+- Pinned explicit versions are recommended for production workflows; `latest` is convenience mode and less deterministic.
+- Auth modes `env` and `github-oidc` remain supported after install-mode expansion.
+- The released-binary action install PR adds no new Microsoft collectors, no new posture checks, and no new providers.

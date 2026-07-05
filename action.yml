@@ -1,5 +1,5 @@
 name: "STANCE GitHub Action"
-description: "Run STANCE posture evaluation from source in this repository"
+description: "Install and run STANCE posture evaluation in GitHub Actions"
 
 inputs:
   provider:
@@ -39,7 +39,7 @@ inputs:
     required: false
     default: ""
   stance-version:
-    description: "Version source. For this PR, only local is supported."
+    description: "Version source: local, latest, or semantic tag vX.Y.Z."
     required: false
     default: "local"
   fail-on-findings:
@@ -70,23 +70,163 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Validate stance-version input
+    - name: Resolve/install STANCE binary
       shell: bash
       run: |
         set -euo pipefail
-        if [ "${{ inputs.stance-version }}" != "local" ]; then
-          echo "Unsupported stance-version: ${{ inputs.stance-version }}"
-          echo "Only 'local' is supported in this initial action version."
-          echo "Released binary install support is planned for a future update."
+        version_input="${{ inputs.stance-version }}"
+        repo_owner="goldjg"
+        repo_name="stance"
+        release_base_api="https://api.github.com/repos/${repo_owner}/${repo_name}/releases"
+        release_base_download="https://github.com/${repo_owner}/${repo_name}/releases/download"
+
+        runner_os="${RUNNER_OS}"
+        runner_arch="${RUNNER_ARCH}"
+
+        tag=""
+        if [ "${version_input}" = "local" ]; then
+          go build -o "${RUNNER_TEMP}/stance" ./cmd/stance
+        elif [ "${version_input}" = "latest" ]; then
+          latest_response="$(curl --fail --silent --show-error "${release_base_api}/latest")"
+          tag="$(
+            printf '%s' "${latest_response}" \
+              | tr -d '\n' \
+              | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
+              | head -n1 \
+              | sed -E 's/.*"([^"]+)"$/\1/'
+          )"
+          if [ -z "${tag}" ]; then
+            echo "Failed to resolve latest release tag from ${repo_owner}/${repo_name}."
+            exit 1
+          fi
+        elif [[ "${version_input}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+          tag="${version_input}"
+        else
+          echo "Unsupported stance-version: ${version_input}"
+          echo "Supported values: local, latest, or semantic tag vX.Y.Z"
           exit 1
         fi
 
-    - name: Build local STANCE binary
-      shell: bash
-      run: |
-        set -euo pipefail
-        go build -o "${RUNNER_TEMP}/stance" ./cmd/stance
-        chmod +x "${RUNNER_TEMP}/stance"
+        if [ "${version_input}" != "local" ]; then
+          asset_os=""
+          asset_arch=""
+          archive_ext=""
+          case "${runner_os}:${runner_arch}" in
+            Linux:X64)
+              asset_os="linux"
+              asset_arch="amd64"
+              archive_ext="tar.gz"
+              ;;
+            Linux:ARM64)
+              asset_os="linux"
+              asset_arch="arm64"
+              archive_ext="tar.gz"
+              ;;
+            macOS:X64)
+              asset_os="darwin"
+              asset_arch="amd64"
+              archive_ext="tar.gz"
+              ;;
+            macOS:ARM64)
+              asset_os="darwin"
+              asset_arch="arm64"
+              archive_ext="tar.gz"
+              ;;
+            Windows:X64)
+              asset_os="windows"
+              asset_arch="amd64"
+              archive_ext="zip"
+              ;;
+            *)
+              echo "Unsupported runner target for released-binary mode: ${runner_os}/${runner_arch}"
+              echo "Supported targets: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64"
+              exit 1
+              ;;
+          esac
+
+          asset_version="${tag#v}"
+          if [ -z "${asset_version}" ] || [ "${asset_version}" = "${tag}" ]; then
+            echo "Invalid release tag format '${tag}'; expected tag starting with 'v'."
+            exit 1
+          fi
+
+          archive_name="stance_${asset_version}_${asset_os}_${asset_arch}.${archive_ext}"
+          checksums_name="checksums.txt"
+          archive_url="${release_base_download}/${tag}/${archive_name}"
+          checksums_url="${release_base_download}/${tag}/${checksums_name}"
+          archive_path="${RUNNER_TEMP}/${archive_name}"
+          checksums_path="${RUNNER_TEMP}/${checksums_name}"
+
+          curl --fail --silent --show-error --location --output "${archive_path}" "${archive_url}"
+          curl --fail --silent --show-error --location --output "${checksums_path}" "${checksums_url}"
+
+          expected_sha="$(
+            awk -v file="${archive_name}" '
+              {
+                name = $NF
+                sub(/^\*/, "", name)
+                if (name == file) {
+                  print $1
+                  exit
+                }
+              }
+            ' "${checksums_path}"
+          )"
+          if [ -z "${expected_sha}" ]; then
+            echo "Checksum for ${archive_name} was not found in ${checksums_name}."
+            exit 1
+          fi
+
+          actual_sha=""
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual_sha="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          elif command -v shasum >/dev/null 2>&1; then
+            actual_sha="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          elif [ "${runner_os}" = "Windows" ]; then
+            actual_sha="$(
+              powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 -Path '${archive_path}').Hash.ToLowerInvariant()"
+            )"
+          else
+            echo "No SHA-256 tool is available on this runner."
+            exit 1
+          fi
+
+          if [ "${actual_sha}" != "${expected_sha}" ]; then
+            echo "Checksum mismatch for ${archive_name}."
+            echo "Expected: ${expected_sha}"
+            echo "Actual:   ${actual_sha}"
+            exit 1
+          fi
+
+          if [ "${archive_ext}" = "tar.gz" ]; then
+            tar -xzf "${archive_path}" -C "${RUNNER_TEMP}"
+          elif [ "${archive_ext}" = "zip" ]; then
+            if command -v unzip >/dev/null 2>&1; then
+              unzip -o "${archive_path}" -d "${RUNNER_TEMP}" >/dev/null
+            else
+              powershell -NoProfile -Command "Expand-Archive -Path '${archive_path}' -DestinationPath '${RUNNER_TEMP}' -Force"
+            fi
+          else
+            echo "Unsupported archive format: ${archive_ext}"
+            exit 1
+          fi
+        fi
+
+        stance_bin=""
+        if [ -f "${RUNNER_TEMP}/stance" ]; then
+          stance_bin="${RUNNER_TEMP}/stance"
+        elif [ -f "${RUNNER_TEMP}/stance.exe" ]; then
+          stance_bin="${RUNNER_TEMP}/stance.exe"
+        else
+          echo "STANCE binary was not found after install."
+          exit 1
+        fi
+
+        if [ "${runner_os}" != "Windows" ]; then
+          chmod +x "${stance_bin}"
+        fi
+
+        echo "STANCE_BIN=${stance_bin}" >> "${GITHUB_ENV}"
 
     - name: Prepare authentication environment
       shell: bash
@@ -165,6 +305,14 @@ print(token, end="")'
       shell: bash
       run: |
         set -euo pipefail
+        stance_bin="${STANCE_BIN:-${RUNNER_TEMP}/stance}"
+        if [ ! -f "${stance_bin}" ] && [ -f "${RUNNER_TEMP}/stance.exe" ]; then
+          stance_bin="${RUNNER_TEMP}/stance.exe"
+        fi
+        if [ ! -f "${stance_bin}" ]; then
+          echo "STANCE binary not found at expected path."
+          exit 1
+        fi
 
         provider="${{ inputs.provider }}"
         suite="${{ inputs.suite }}"
@@ -190,12 +338,12 @@ print(token, end="")'
           facts_path="${facts_input}"
         else
           facts_path="${output_directory}/facts.json"
-          "${RUNNER_TEMP}/stance" collect \
+          "${stance_bin}" collect \
             --provider "${provider}" \
             --out "${facts_path}"
         fi
 
-        "${RUNNER_TEMP}/stance" check \
+        "${stance_bin}" check \
           --facts "${facts_path}" \
           --provider "${provider}" \
           --suite "${suite}" \
@@ -245,7 +393,7 @@ print(token, end="")'
 
         if [ "${want_html}" = "true" ]; then
           html_path="${output_directory}/stance.html"
-          "${RUNNER_TEMP}/stance" report \
+          "${stance_bin}" report \
             --results "${results_path}" \
             --format html \
             --out "${html_path}"
@@ -253,7 +401,7 @@ print(token, end="")'
 
         if [ "${want_sarif}" = "true" ]; then
           sarif_path="${output_directory}/stance.sarif"
-          "${RUNNER_TEMP}/stance" report \
+          "${stance_bin}" report \
             --results "${results_path}" \
             --format sarif \
             --out "${sarif_path}"
@@ -261,7 +409,7 @@ print(token, end="")'
 
         if [ "${want_markdown}" = "true" ]; then
           markdown_path="${output_directory}/stance.md"
-          "${RUNNER_TEMP}/stance" report \
+          "${stance_bin}" report \
             --results "${results_path}" \
             --format markdown \
             --out "${markdown_path}"
@@ -269,7 +417,7 @@ print(token, end="")'
 
         if [ "${want_junit}" = "true" ]; then
           junit_path="${output_directory}/stance.junit.xml"
-          "${RUNNER_TEMP}/stance" report \
+          "${stance_bin}" report \
             --results "${results_path}" \
             --format junit \
             --out "${junit_path}"

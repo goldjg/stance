@@ -117,14 +117,20 @@ or Microsoft module dependencies.
 ## GitHub Action
 
 STANCE includes a composite GitHub Action wrapper at repository root
-(`action.yml`) that builds STANCE locally from checked-out source.
+(`action.yml`) that can build locally from source or install a released binary.
 
 - Documentation: [docs/github-action.md](docs/github-action.md)
 - Example workflow files:
   - `docs/examples/github-actions/stance-microsoft365.yml`
   - `docs/examples/github-actions/stance-facts-only.yml`
-- Current supported execution mode: local build only (`stance-version: local`)
-- Released-binary action install mode is planned
+- Supported `stance-version` modes:
+  - `local` (build from checked-out source)
+  - `latest` (resolve and install latest release binary)
+  - `vX.Y.Z` (install pinned release binary)
+- Released-binary mode verifies release archive checksums before execution.
+- For production workflows, pin both:
+  - the action ref (for example `uses: goldjg/stance@v0.1.0`)
+  - the binary version input (for example `stance-version: v0.1.0`)
 
 Minimal `github-oidc` invocation example:
 
@@ -133,6 +139,7 @@ Minimal `github-oidc` invocation example:
   id: stance
   uses: ./
   with:
+    stance-version: local
     auth-mode: github-oidc
     tenant-id: ${{ vars.STANCE_TENANT_ID }}
     client-id: ${{ vars.STANCE_CLIENT_ID }}

@@ -2,22 +2,25 @@
 
 ## Purpose
 
-The STANCE GitHub Action is a repository-local composite action that builds and
-runs STANCE from checked-out source.
-
-## Current status
-
-- Composite action at repository root (`action.yml`)
-- Local build execution (`stance-version: local`) only
-- Live collection and facts-only evaluation paths
-- Action-native optional GitHub OIDC assertion acquisition for live collection
-
-Released-binary install mode is still planned and not implemented yet.
+The STANCE GitHub Action is a composite action that installs the STANCE CLI,
+then runs collect/check/report in CI.
 
 Reference example workflow files:
 
 - `docs/examples/github-actions/stance-microsoft365.yml`
 - `docs/examples/github-actions/stance-facts-only.yml`
+
+## Current status
+
+- Composite action at repository root (`action.yml`)
+- Install modes via `stance-version`:
+  - `local` (build from checked-out source)
+  - `latest` (download latest GitHub Release asset)
+  - `vX.Y.Z` (download pinned release asset)
+- Released-binary mode verifies archive SHA-256 against release `checksums.txt`
+  before extraction and execution
+- Live collection and facts-only evaluation paths
+- Action-native optional GitHub OIDC assertion acquisition for live collection
 
 ## Inputs
 
@@ -32,19 +35,62 @@ Reference example workflow files:
 | `oidc-audience` | `api://AzureADTokenExchange` | Audience value used when requesting GitHub OIDC token in `github-oidc` mode. |
 | `tenant-id` | `""` | Optional tenant ID exported as `STANCE_TENANT_ID` when set. |
 | `client-id` | `""` | Optional client/application ID exported as `STANCE_CLIENT_ID` when set. |
-| `stance-version` | `local` | Version source. Only `local` is currently supported. |
+| `stance-version` | `local` | STANCE install mode: `local`, `latest`, or pinned tag such as `v0.1.0`. |
 | `fail-on-findings` | `false` | Reserved for future behavior; not implemented in this version. |
 
-## Outputs
+## `stance-version` modes
 
-| Output | Description |
+- `local`
+  - Builds from checked-out repository source.
+  - Intended for repository development and dogfooding (`uses: ./`).
+- `latest`
+  - Resolves the latest STANCE GitHub Release tag.
+  - Downloads matching release archive for the runner platform.
+  - Convenient, but less deterministic over time.
+- `vX.Y.Z`
+  - Uses a specific release tag (for example `v0.1.0`).
+  - Downloads matching release archive for that exact release.
+  - Recommended for production workflows.
+
+For production workflows, pin both:
+
+- action ref (for example `uses: goldjg/stance@v0.1.0`)
+- `stance-version` (for example `stance-version: v0.1.0`)
+
+## Release asset mapping
+
+Release tag keeps the `v` prefix (for example `v0.1.0`) while archive filenames
+use the bare version (for example `0.1.0`):
+
+- tag: `v0.1.0`
+- asset version: `0.1.0`
+- asset format: `stance_<asset-version>_<os>_<arch>.<ext>`
+
+Supported released-binary runner targets:
+
+| Runner target | Asset name pattern |
 | --- | --- |
-| `facts-path` | Facts path used for evaluation (provided input path or generated facts path). |
-| `results-path` | Durable STANCE result JSON path (`<output-directory>/results.json`). |
-| `html-path` | HTML report path when `html` is requested. |
-| `sarif-path` | SARIF report path when `sarif` is requested. |
-| `markdown-path` | Markdown report path when `md` or `markdown` is requested. |
-| `junit-path` | JUnit XML report path when `junit` is requested. |
+| Linux x64 | `stance_<version>_linux_amd64.tar.gz` |
+| Linux arm64 | `stance_<version>_linux_arm64.tar.gz` |
+| macOS x64 | `stance_<version>_darwin_amd64.tar.gz` |
+| macOS arm64 | `stance_<version>_darwin_arm64.tar.gz` |
+| Windows x64 | `stance_<version>_windows_amd64.zip` |
+
+Unsupported targets fail clearly in released-binary mode.
+
+## Checksum verification
+
+Released-binary mode always downloads both:
+
+- selected release archive
+- `checksums.txt` from the same release tag
+
+The action then:
+
+1. Confirms the selected archive basename exists in `checksums.txt`.
+2. Computes archive SHA-256 on the runner.
+3. Fails if checksum is missing or mismatched.
+4. Extracts and executes only after checksum verification succeeds.
 
 ## Authentication modes
 
@@ -74,13 +120,9 @@ export it as `STANCE_CLIENT_ASSERTION` for live collection.
 When `facts-path` is provided, live collection is skipped and OIDC acquisition
 is skipped regardless of auth mode.
 
-Unsupported `auth-mode` values fail clearly.
+Facts-only mode remains auth-free.
 
-If `auth-mode: github-oidc` is selected but GitHub OIDC request environment
-variables are unavailable, the action fails with guidance to set
-`permissions: id-token: write`.
-
-## Live collection example (`github-oidc`)
+## Local dogfooding example (`uses: ./`)
 
 ```yaml
 permissions:
@@ -94,10 +136,34 @@ steps:
     with:
       go-version-file: go.mod
 
-  - name: Run STANCE
+  - name: Run STANCE from local source
     id: stance
     uses: ./
     with:
+      stance-version: local
+      auth-mode: github-oidc
+      tenant-id: ${{ vars.STANCE_TENANT_ID }}
+      client-id: ${{ vars.STANCE_CLIENT_ID }}
+      provider: microsoft365
+      suite: entra
+      formats: json,html,sarif
+      output-directory: stance-results
+```
+
+## External repository production-style example (pinned)
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+steps:
+  - name: Run STANCE (pinned action + pinned binary)
+    id: stance
+    uses: goldjg/stance@v0.1.0 # Example tag placeholder; pin to a real release tag.
+    with:
+      stance-version: v0.1.0
       auth-mode: github-oidc
       tenant-id: ${{ vars.STANCE_TENANT_ID }}
       client-id: ${{ vars.STANCE_CLIENT_ID }}
@@ -109,16 +175,20 @@ steps:
 
 ## Facts-only example
 
+Facts-only mode can use either local or released-binary install mode.
+
 ```yaml
 steps:
   - uses: actions/checkout@v4
   - uses: actions/setup-go@v5
     with:
       go-version-file: go.mod
+
   - name: Run STANCE from existing facts
     id: stance
     uses: ./
     with:
+      stance-version: local
       provider: microsoft365
       suite: entra
       facts-path: examples/facts/sample-facts.json
@@ -126,7 +196,20 @@ steps:
       output-directory: stance-results
 ```
 
-Facts-only mode remains auth-free.
+Equivalent released-binary mode:
+
+```yaml
+- name: Run STANCE from existing facts (pinned release binary)
+  id: stance
+  uses: goldjg/stance@v0.1.0 # Example tag placeholder; pin to a real release tag.
+  with:
+    stance-version: v0.1.0
+    provider: microsoft365
+    suite: entra
+    facts-path: examples/facts/sample-facts.json
+    formats: json,html,sarif
+    output-directory: stance-results
+```
 
 ## Entra setup requirements (external to STANCE)
 
@@ -175,6 +258,7 @@ Upload output files using `actions/upload-artifact`:
 
 ## Security notes
 
+- Released binaries are checksum-verified before extraction and execution.
 - GitHub OIDC tokens are short-lived; prefer this over long-lived secrets when
   feasible.
 - Do not echo assertions/tokens in workflow logs.
@@ -183,9 +267,3 @@ Upload output files using `actions/upload-artifact`:
 - Generated facts/results/reports can contain sensitive tenant posture data.
 - STANCE SARIF output represents tenant posture findings, not source-code
   location vulnerabilities.
-
-## Future work
-
-- Released-binary install mode for action execution.
-- `fail-on-findings` behavior support.
-- Scheduled drift comparison and historical run analysis patterns.
