@@ -1,0 +1,47 @@
+# Example only: workflows in .github/workflows/examples are not active in this repository.
+# Copy this file to .github/workflows/ in your own repository to enable it.
+name: example-stance-facts-only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  posture-from-facts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run STANCE (facts only)
+        id: stance
+        uses: ./
+        with:
+          provider: microsoft365
+          suite: entra
+          facts-path: examples/facts/sample-facts.json
+          formats: json,html,sarif
+          output-directory: stance-results
+
+      - name: Upload SARIF
+        if: ${{ steps.stance.outputs.sarif-path != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.stance.outputs.sarif-path }}
+
+      - name: Upload STANCE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stance-results-facts-only
+          path: |
+            ${{ steps.stance.outputs.results-path }}
+            ${{ steps.stance.outputs.html-path }}
+            ${{ steps.stance.outputs.sarif-path }}

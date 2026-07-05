@@ -1,0 +1,197 @@
+name: "STANCE GitHub Action"
+description: "Run STANCE posture evaluation from source in this repository"
+
+inputs:
+  provider:
+    description: "STANCE provider to evaluate."
+    required: false
+    default: "microsoft365"
+  suite:
+    description: "STANCE suite to evaluate."
+    required: false
+    default: "entra"
+  output-directory:
+    description: "Directory for generated facts, result JSON, and reports."
+    required: false
+    default: "stance-results"
+  formats:
+    description: "Comma-separated report formats to generate."
+    required: false
+    default: "json,html,sarif"
+  facts-path:
+    description: "Existing facts JSON to evaluate instead of collecting live facts."
+    required: false
+    default: ""
+  stance-version:
+    description: "Version source. For this PR, only local is supported."
+    required: false
+    default: "local"
+  fail-on-findings:
+    description: "Reserved for future behavior; currently not implemented."
+    required: false
+    default: "false"
+
+outputs:
+  facts-path:
+    description: "Path to facts used for evaluation."
+    value: ${{ steps.run.outputs.facts-path }}
+  results-path:
+    description: "Path to durable STANCE result JSON."
+    value: ${{ steps.run.outputs.results-path }}
+  html-path:
+    description: "Path to generated HTML report, if requested."
+    value: ${{ steps.run.outputs.html-path }}
+  sarif-path:
+    description: "Path to generated SARIF report, if requested."
+    value: ${{ steps.run.outputs.sarif-path }}
+  markdown-path:
+    description: "Path to generated Markdown report, if requested."
+    value: ${{ steps.run.outputs.markdown-path }}
+  junit-path:
+    description: "Path to generated JUnit XML report, if requested."
+    value: ${{ steps.run.outputs.junit-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate stance-version input
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.stance-version }}" != "local" ]; then
+          echo "Unsupported stance-version: ${{ inputs.stance-version }}"
+          echo "Only 'local' is supported in this initial action version."
+          echo "Released binary install support is planned for a future update."
+          exit 1
+        fi
+
+    - name: Build local STANCE binary
+      shell: bash
+      run: |
+        set -euo pipefail
+        go build -o "${RUNNER_TEMP}/stance" ./cmd/stance
+        chmod +x "${RUNNER_TEMP}/stance"
+
+    - name: Collect/check/report
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        provider="${{ inputs.provider }}"
+        suite="${{ inputs.suite }}"
+        output_directory="${{ inputs.output-directory }}"
+        formats_input="${{ inputs.formats }}"
+        facts_input="${{ inputs.facts-path }}"
+        facts_input="${facts_input#"${facts_input%%[![:space:]]*}"}"
+        facts_input="${facts_input%"${facts_input##*[![:space:]]}"}"
+        fail_on_findings="$(echo "${{ inputs.fail-on-findings }}" | tr '[:upper:]' '[:lower:]')"
+
+        mkdir -p "${output_directory}"
+
+        if [ "${fail_on_findings}" = "true" ]; then
+          echo "fail-on-findings is reserved and not implemented in this action version."
+        fi
+
+        results_path="${output_directory}/results.json"
+        if [ -n "${facts_input}" ]; then
+          if [ ! -f "${facts_input}" ]; then
+            echo "facts-path does not exist: ${facts_input}"
+            exit 1
+          fi
+          facts_path="${facts_input}"
+        else
+          facts_path="${output_directory}/facts.json"
+          "${RUNNER_TEMP}/stance" collect \
+            --provider "${provider}" \
+            --out "${facts_path}"
+        fi
+
+        "${RUNNER_TEMP}/stance" check \
+          --facts "${facts_path}" \
+          --provider "${provider}" \
+          --suite "${suite}" \
+          --format json \
+          --out "${results_path}"
+
+        want_html=false
+        want_sarif=false
+        want_markdown=false
+        want_junit=false
+
+        IFS=',' read -r -a requested_formats <<< "${formats_input}"
+        for raw in "${requested_formats[@]}"; do
+          format="${raw#"${raw%%[![:space:]]*}"}"
+          format="${format%"${format##*[![:space:]]}"}"
+          format="$(echo "${format}" | tr '[:upper:]' '[:lower:]')"
+          if [ -z "${format}" ]; then
+            continue
+          fi
+          case "${format}" in
+            json)
+              ;;
+            html)
+              want_html=true
+              ;;
+            sarif)
+              want_sarif=true
+              ;;
+            md|markdown)
+              want_markdown=true
+              ;;
+            junit)
+              want_junit=true
+              ;;
+            *)
+              echo "Unsupported report format: ${format}"
+              echo "Supported formats: json, html, sarif, md/markdown, junit"
+              exit 1
+              ;;
+          esac
+        done
+
+        html_path=""
+        sarif_path=""
+        markdown_path=""
+        junit_path=""
+
+        if [ "${want_html}" = "true" ]; then
+          html_path="${output_directory}/stance.html"
+          "${RUNNER_TEMP}/stance" report \
+            --results "${results_path}" \
+            --format html \
+            --out "${html_path}"
+        fi
+
+        if [ "${want_sarif}" = "true" ]; then
+          sarif_path="${output_directory}/stance.sarif"
+          "${RUNNER_TEMP}/stance" report \
+            --results "${results_path}" \
+            --format sarif \
+            --out "${sarif_path}"
+        fi
+
+        if [ "${want_markdown}" = "true" ]; then
+          markdown_path="${output_directory}/stance.md"
+          "${RUNNER_TEMP}/stance" report \
+            --results "${results_path}" \
+            --format markdown \
+            --out "${markdown_path}"
+        fi
+
+        if [ "${want_junit}" = "true" ]; then
+          junit_path="${output_directory}/stance.junit.xml"
+          "${RUNNER_TEMP}/stance" report \
+            --results "${results_path}" \
+            --format junit \
+            --out "${junit_path}"
+        fi
+
+        {
+          echo "facts-path=${facts_path}"
+          echo "results-path=${results_path}"
+          echo "html-path=${html_path}"
+          echo "sarif-path=${sarif_path}"
+          echo "markdown-path=${markdown_path}"
+          echo "junit-path=${junit_path}"
+        } >> "${GITHUB_OUTPUT}"

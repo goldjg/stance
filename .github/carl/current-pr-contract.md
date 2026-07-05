@@ -1,26 +1,27 @@
 # Current PR contract
 
 ## PR focus
-Add first-class STANCE release and distribution packaging.
+Add initial GitHub Action packaging and documentation for STANCE.
 
 ## Included
-- Add `.goreleaser.yaml` with STANCE-specific release configuration.
-- Add `.github/workflows/release.yml` tag-triggered release workflow.
-- Add `.github/scripts/codesign-darwin.sh` darwin codesign helper.
-- Configure native Linux package generation (`deb`, `rpm`, `apk`) via nFPM.
-- Configure Homebrew cask publishing target for `goldjg/homebrew-stance`.
-- Add optional token-gated WinGet submission job in release workflow.
-- Add `DISTRIBUTION.md` release/distribution documentation.
-- Update README release/install guidance and link distribution docs.
-- Update `.github/carl/memory.md` with durable release packaging truth.
+- Add root `action.yml` composite action for STANCE local-build execution.
+- Add example workflows under `.github/workflows/examples/`:
+  - `stance-microsoft365.yml`
+  - `stance-facts-only.yml`
+- Add `docs/github-action.md` with action contract and usage guidance.
+- Update `README.md` with GitHub Action section and docs link.
+- Update `docs/maester-parity.md` CI/CD and integration parity status notes.
+- Update `.github/carl/memory.md` with durable action/auth/SARIF truths.
+- Update current PR contract for focused scope and exclusions.
 
 ## Excluded
 - New Microsoft API collectors.
 - New posture checks.
 - New providers.
-- GitHub Action wrapper for running STANCE posture commands.
-- macOS notarisation implementation.
-- Live release publishing verification against external channels.
+- Released binary install mode in the action.
+- GitHub OIDC-to-Entra token exchange implementation.
+- `fail-on-findings` behavior wiring if not already present.
+- Release pipeline implementation changes (except documentation references).
 
 ## Guardrails
 - Keep STANCE runtime 100% Go.
@@ -34,4 +35,4 @@ Add first-class STANCE release and distribution packaging.
 - `gofmt -l .` clean.
 - `go test ./...`.
 - `go vet ./...`.
-- `goreleaser check` when available in environment.
+- Manual review of `action.yml` and example workflow correctness.

@@ -1,0 +1,64 @@
+# Example only: workflows in .github/workflows/examples are not active in this repository.
+# Copy this file to .github/workflows/ in your own repository to enable it.
+name: example-stance-microsoft365
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+jobs:
+  posture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Exchange GitHub OIDC token for Entra federated assertion/token file
+        run: |
+          echo "Placeholder step."
+          echo "Implement your own OIDC token exchange flow here."
+          echo "Provide STANCE_TENANT_ID, STANCE_CLIENT_ID, and"
+          echo "STANCE_FEDERATED_TOKEN_FILE (or STANCE_CLIENT_ASSERTION)."
+          echo "STANCE_FEDERATED_TOKEN_FILE=${RUNNER_TEMP}/entra-federated-token.jwt" >> "${GITHUB_ENV}"
+
+      - name: Run STANCE (live collection)
+        id: stance
+        uses: ./
+        with:
+          provider: microsoft365
+          suite: entra
+          formats: json,html,sarif
+          output-directory: stance-results
+        env:
+          STANCE_TENANT_ID: ${{ vars.STANCE_TENANT_ID }}
+          STANCE_CLIENT_ID: ${{ vars.STANCE_CLIENT_ID }}
+          STANCE_FEDERATED_TOKEN_FILE: ${{ env.STANCE_FEDERATED_TOKEN_FILE }}
+          # Fallback only:
+          # STANCE_CLIENT_SECRET: ${{ secrets.STANCE_CLIENT_SECRET }}
+
+      - name: Upload SARIF
+        if: ${{ steps.stance.outputs.sarif-path != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.stance.outputs.sarif-path }}
+
+      - name: Upload STANCE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stance-results-live
+          path: |
+            ${{ steps.stance.outputs.facts-path }}
+            ${{ steps.stance.outputs.results-path }}
+            ${{ steps.stance.outputs.html-path }}
+            ${{ steps.stance.outputs.sarif-path }}

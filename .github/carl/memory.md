@@ -52,3 +52,9 @@
 - macOS release artefacts are codesigned when Apple signing secrets are configured.
 - Notarisation is not implemented yet; darwin artefacts are signed but not notarised.
 - This release packaging PR adds no new Microsoft collectors, no new posture checks, and no new providers.
+- Initial STANCE GitHub Action wrapper exists as a repository-local composite action (`action.yml`) that builds STANCE from checked-out source.
+- The GitHub Action supports facts-only mode via `facts-path` and can run evaluation/report generation without Microsoft authentication.
+- Live collection via GitHub Action requires existing STANCE environment-driven Microsoft auth variables.
+- GitHub OIDC-to-Entra token exchange is not faked in the action; workflows/docs must include an explicit exchange step when using WIF.
+- SARIF upload is supported by generating `stance.sarif` and uploading through `github/codeql-action/upload-sarif`.
+- This GitHub Action packaging/documentation PR adds no new Microsoft collectors, no new posture checks, and no new providers.
