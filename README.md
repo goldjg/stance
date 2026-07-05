@@ -89,6 +89,31 @@ Repository bootstrap is in progress. The current milestone establishes:
 - cARL governance bootstrap.
 - Baseline CI for format/test/vet checks.
 
+## Release and installation
+
+STANCE release/distribution packaging is configured for tagged releases (`v*`)
+when required secrets and repositories are present.
+
+- Direct release downloads: GitHub Releases for `goldjg/stance`
+- Distribution guide (artefacts, checksums, Linux packages, Homebrew, WinGet):
+  [DISTRIBUTION.md](DISTRIBUTION.md)
+- Homebrew configured path:
+  - `brew tap goldjg/stance`
+  - `brew trust goldjg/stance`
+  - `brew install --cask stance`
+- WinGet configured path (token-gated workflow submission):
+  - `winget install goldjg.STANCE`
+
+Build from source:
+
+```sh
+go install github.com/goldjg/stance/cmd/stance@latest
+```
+
+Runtime constraints remain unchanged: STANCE runtime is 100% Go, provider-core
+boundaries remain provider-neutral, and STANCE does not add PowerShell runtime
+or Microsoft module dependencies.
+
 ## Auth test command (current)
 
 `stance auth test` validates token acquisition and performs a read-only Graph reachability check.

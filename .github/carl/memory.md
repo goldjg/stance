@@ -44,3 +44,11 @@
 - `stance check --format json` emits the durable STANCE result document as handoff format to `stance report`.
 - SARIF output (`--format sarif`) is implemented for both `stance check` and `stance report`.
 - This PR intentionally adds no new Microsoft API collectors and no new posture checks.
+- STANCE release packaging uses GoReleaser v2 with project-specific release/distribution configuration.
+- Tagged `v*` releases publish cross-platform STANCE CLI artefacts (linux/darwin/windows amd64, plus linux/darwin arm64).
+- Linux native packages (`deb`, `rpm`, `apk`) are generated via GoReleaser nFPM config.
+- Homebrew cask publishing targets `goldjg/homebrew-stance` via `HOMEBREW_TAP_GITHUB_TOKEN`.
+- WinGet submission is optional and token-gated via release workflow (`WINGETCREATE_TOKEN`) using package ID `goldjg.STANCE`.
+- macOS release artefacts are codesigned when Apple signing secrets are configured.
+- Notarisation is not implemented yet; darwin artefacts are signed but not notarised.
+- This release packaging PR adds no new Microsoft collectors, no new posture checks, and no new providers.
