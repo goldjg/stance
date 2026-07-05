@@ -150,6 +150,15 @@ func TestDerivePrivilegedCAEvidenceCoverageViaDirectGroupMembership(t *testing.T
 				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
 			},
 		},
+		PrincipalGroupResolutions: []facts.PrincipalGroupResolution{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				Resolved:         true,
+				DirectGroupCount: 1,
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
 	})
 	if summary.PrincipalsWithCoverageEvidence != 1 {
 		t.Fatalf("expected group-based coverage evidence, got %+v", summary)
@@ -162,6 +171,9 @@ func TestDerivePrivilegedCAEvidenceCoverageViaDirectGroupMembership(t *testing.T
 	}
 	if strings.Join(summary.Principals[0].DirectGroupDisplayNames, ",") != "Privileged Admins" {
 		t.Fatalf("expected direct group names on principal evidence, got %+v", summary.Principals[0].DirectGroupDisplayNames)
+	}
+	if summary.Principals[0].GroupResolutionStatus != "resolved" || summary.Principals[0].DirectGroupCount != 1 {
+		t.Fatalf("expected resolved group status and direct count, got %+v", summary.Principals[0])
 	}
 }
 
@@ -190,12 +202,84 @@ func TestDerivePrivilegedCAEvidenceExclusionViaDirectGroupMembership(t *testing.
 				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
 			},
 		},
+		PrincipalGroupResolutions: []facts.PrincipalGroupResolution{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				Resolved:         true,
+				DirectGroupCount: 1,
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
 	})
 	if summary.PrincipalsWithDirectExclusionEvidence != 1 {
 		t.Fatalf("expected direct group-based exclusion evidence, got %+v", summary)
 	}
 	if got := strings.Join(summary.Principals[0].ExclusionEvidence, " "); !strings.Contains(got, "Direct group membership exclusion evidence") {
 		t.Fatalf("expected direct group exclusion evidence line, got %+v", summary.Principals[0].ExclusionEvidence)
+	}
+}
+
+func TestDerivePrivilegedCAEvidenceGroupResolutionFailureAddsLimitation(t *testing.T) {
+	summary := DerivePrivilegedCAEvidence(facts.Bundle{
+		CAPolicies: []facts.CAPolicyFact{
+			{
+				ID:              "policy-1",
+				DisplayName:     "Privileged group MFA",
+				State:           "enabled",
+				IncludedGroups:  []string{"group-1"},
+				BuiltInControls: []string{"mfa"},
+			},
+		},
+		PrivilegedPrincipals: []facts.PrivilegedPrincipal{
+			{PrincipalID: "principal-1", DisplayName: "Alice"},
+		},
+		PrincipalGroupResolutions: []facts.PrincipalGroupResolution{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				Resolved:         false,
+				DirectGroupCount: 0,
+				ErrorKind:        "graph_error",
+				ErrorMessage:     "graph returned status 403",
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
+	})
+
+	if summary.PrincipalsWithCoverageEvidence != 0 || summary.PrincipalsWithUnknownCoverage != 1 {
+		t.Fatalf("expected failed group resolution to keep coverage unknown, got %+v", summary)
+	}
+	principal := summary.Principals[0]
+	if principal.GroupResolutionStatus != "failed" {
+		t.Fatalf("expected failed group resolution status, got %+v", principal)
+	}
+	if principal.GroupResolutionErrorKind != "graph_error" || principal.GroupResolutionErrorMessage != "graph returned status 403" {
+		t.Fatalf("expected preserved group resolution error details, got %+v", principal)
+	}
+	limitations := strings.Join(principal.Limitations, " ")
+	if !strings.Contains(limitations, "Direct group membership resolution failed") {
+		t.Fatalf("expected failure limitation line, got %+v", principal.Limitations)
+	}
+}
+
+func TestDerivePrivilegedCAEvidenceMissingGroupResolutionStatusIsUnknown(t *testing.T) {
+	summary := DerivePrivilegedCAEvidence(facts.Bundle{
+		PrivilegedPrincipals: []facts.PrivilegedPrincipal{
+			{PrincipalID: "principal-1", DisplayName: "Alice"},
+		},
+	})
+
+	if summary.PrincipalsWithCoverageEvidence != 0 || summary.PrincipalsWithUnknownCoverage != 1 {
+		t.Fatalf("expected unknown coverage for missing resolution facts, got %+v", summary)
+	}
+	principal := summary.Principals[0]
+	if principal.GroupResolutionStatus != "unknown" {
+		t.Fatalf("expected unknown group resolution status, got %+v", principal)
+	}
+	limitations := strings.Join(principal.Limitations, " ")
+	if !strings.Contains(limitations, "resolution status is unknown") {
+		t.Fatalf("expected unknown-resolution limitation, got %+v", principal.Limitations)
 	}
 }
 

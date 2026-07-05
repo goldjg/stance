@@ -62,6 +62,23 @@ func TestChecksFromRuleMetadata(t *testing.T) {
 	if !containsString(coverage.DataRequirements, "principal_group_memberships") {
 		t.Fatalf("expected principal_group_memberships data requirement on ENTRA-CA-006, got %#v", coverage.DataRequirements)
 	}
+	if !containsString(coverage.DataRequirements, "principal_group_resolutions") {
+		t.Fatalf("expected principal_group_resolutions data requirement on ENTRA-CA-006, got %#v", coverage.DataRequirements)
+	}
+	exclusions, ok := findCheckByID(checks, "ENTRA-CA-007")
+	if !ok {
+		t.Fatalf("expected ENTRA-CA-007 in catalog")
+	}
+	if !containsString(exclusions.DataRequirements, "principal_group_resolutions") {
+		t.Fatalf("expected principal_group_resolutions data requirement on ENTRA-CA-007, got %#v", exclusions.DataRequirements)
+	}
+	unknown, ok := findCheckByID(checks, "ENTRA-CA-008")
+	if !ok {
+		t.Fatalf("expected ENTRA-CA-008 in catalog")
+	}
+	if !containsString(unknown.DataRequirements, "principal_group_resolutions") {
+		t.Fatalf("expected principal_group_resolutions data requirement on ENTRA-CA-008, got %#v", unknown.DataRequirements)
+	}
 }
 
 func findCheckByID(checks []corecatalog.CheckInfo, id string) (corecatalog.CheckInfo, bool) {

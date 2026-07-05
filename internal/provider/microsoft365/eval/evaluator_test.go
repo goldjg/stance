@@ -232,6 +232,15 @@ func TestEvaluateDefaultPrivilegedCAEvidenceDetailsIncludeSortedDirectGroups(t *
 				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
 			},
 		},
+		PrincipalGroupResolutions: []facts.PrincipalGroupResolution{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				Resolved:         true,
+				DirectGroupCount: 2,
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
 	}
 	result := EvaluateDefault(bundle)
 	coverage := findingByRuleID(result, "ENTRA-CA-006")
@@ -247,6 +256,59 @@ func TestEvaluateDefaultPrivilegedCAEvidenceDetailsIncludeSortedDirectGroups(t *
 	groupNames := principals[0]["direct_group_display_names"].([]string)
 	if strings.Join(groupNames, ",") != "Group A,Group Z" {
 		t.Fatalf("expected sorted direct_group_display_names, got %#v", groupNames)
+	}
+	if principals[0]["group_resolution_status"] != "resolved" {
+		t.Fatalf("expected group_resolution_status=resolved, got %#v", principals[0]["group_resolution_status"])
+	}
+	if principals[0]["direct_group_count"] != 2 {
+		t.Fatalf("expected direct_group_count=2, got %#v", principals[0]["direct_group_count"])
+	}
+}
+
+func TestEvaluateDefaultPrivilegedCAEvidenceDetailsIncludeGroupResolutionFailureFields(t *testing.T) {
+	bundle := facts.Bundle{
+		CAPolicies: []facts.CAPolicyFact{
+			{
+				ID:              "policy-1",
+				DisplayName:     "Privileged group MFA",
+				State:           "enabled",
+				IncludedGroups:  []string{"group-1"},
+				BuiltInControls: []string{"mfa"},
+			},
+		},
+		PrivilegedPrincipals: []facts.PrivilegedPrincipal{
+			{
+				PrincipalID: "principal-1",
+				DisplayName: "Alice",
+			},
+		},
+		PrincipalGroupResolutions: []facts.PrincipalGroupResolution{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				Resolved:         false,
+				DirectGroupCount: 0,
+				ErrorKind:        "graph_error",
+				ErrorMessage:     "graph returned status 403",
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
+	}
+	result := EvaluateDefault(bundle)
+	coverage := findingByRuleID(result, "ENTRA-CA-006")
+	root := coverage.Details["privileged_ca_evidence"].(map[string]any)
+	principals := root["principals"].([]map[string]any)
+	if len(principals) != 1 {
+		t.Fatalf("expected one principal in details, got %#v", principals)
+	}
+	if principals[0]["group_resolution_status"] != "failed" {
+		t.Fatalf("expected group_resolution_status=failed, got %#v", principals[0]["group_resolution_status"])
+	}
+	if principals[0]["group_resolution_error_kind"] != "graph_error" {
+		t.Fatalf("expected group_resolution_error_kind, got %#v", principals[0]["group_resolution_error_kind"])
+	}
+	if principals[0]["group_resolution_error_message"] != "graph returned status 403" {
+		t.Fatalf("expected group_resolution_error_message, got %#v", principals[0]["group_resolution_error_message"])
 	}
 }
 

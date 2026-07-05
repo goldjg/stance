@@ -310,12 +310,14 @@ func principalLabel(principal PrivilegedPrincipalCAEvidence) string {
 func privilegedCAEvidenceDetails(summary PrivilegedCAEvidenceSummary) map[string]any {
 	principals := make([]map[string]any, 0, len(summary.Principals))
 	for _, principal := range summary.Principals {
-		principals = append(principals, map[string]any{
+		item := map[string]any{
 			"principal_id":                    principal.PrincipalID,
 			"principal_type":                  principal.PrincipalType,
 			"display_name":                    principal.DisplayName,
 			"user_principal_name":             principal.UserPrincipalName,
 			"role_display_names":              append([]string(nil), principal.RoleDisplayNames...),
+			"group_resolution_status":         principal.GroupResolutionStatus,
+			"direct_group_count":              principal.DirectGroupCount,
 			"direct_group_ids":                append([]string(nil), principal.DirectGroupIDs...),
 			"direct_group_display_names":      append([]string(nil), principal.DirectGroupDisplayNames...),
 			"observed_covering_policy_ids":    append([]string(nil), principal.ObservedCoveringPolicyIDs...),
@@ -325,7 +327,14 @@ func privilegedCAEvidenceDetails(summary PrivilegedCAEvidenceSummary) map[string
 			"coverage_evidence":               append([]string(nil), principal.CoverageEvidence...),
 			"exclusion_evidence":              append([]string(nil), principal.ExclusionEvidence...),
 			"limitations":                     append([]string(nil), principal.Limitations...),
-		})
+		}
+		if strings.TrimSpace(principal.GroupResolutionErrorKind) != "" {
+			item["group_resolution_error_kind"] = principal.GroupResolutionErrorKind
+		}
+		if strings.TrimSpace(principal.GroupResolutionErrorMessage) != "" {
+			item["group_resolution_error_message"] = principal.GroupResolutionErrorMessage
+		}
+		principals = append(principals, item)
 	}
 	return map[string]any{
 		"privileged_ca_evidence": map[string]any{

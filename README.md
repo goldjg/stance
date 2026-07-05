@@ -23,6 +23,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 
 - Provider support: `microsoft365` only for now.
 - Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection and direct privileged-principal group membership collection for cautious privileged-principal CA evidence correlation.
+- Direct privileged-principal group membership collection now records per-principal resolution status so STANCE can distinguish "no direct groups observed" from failed or unknown direct-group resolution.
 - Read-only posture assessment.
 - Current check output formats: durable result JSON, Markdown summary, JUnit XML, HTML, SARIF.
 - Current discovery commands: `providers`, `suites`, `checks`.
@@ -223,10 +224,11 @@ Additional implemented checks:
 - `ENTRA-ROLE-002` privileged role assignments with incomplete principal details observed (informational caution).
 
 STANCE now correlates privileged role-assignment facts, direct privileged-principal group memberships, and Conditional Access policy facts to produce cautious privileged-principal evidence. This evidence is intentionally not a full effective-policy proof.
+Privileged-principal evidence now includes direct-group resolution status to avoid overclaiming when group lookup fails or resolution status is missing.
 
 Durable result JSON now also carries optional structured finding details for privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) under `details.privileged_ca_evidence` for machine-readable handoff. Markdown, HTML, JUnit, and SARIF outputs remain summary-oriented and do not dump full per-principal evidence payloads.
 
-Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, direct group identifiers/names, and observed policy identifiers).
+Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, direct group identifiers/names, direct-group resolution status, and observed policy identifiers).
 
 Current limitations:
 

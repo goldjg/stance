@@ -14,6 +14,10 @@ type PrivilegedPrincipalCAEvidence struct {
 	DisplayName                  string   `json:"display_name,omitempty"`
 	UserPrincipalName            string   `json:"user_principal_name,omitempty"`
 	RoleDisplayNames             []string `json:"role_display_names"`
+	GroupResolutionStatus        string   `json:"group_resolution_status"`
+	GroupResolutionErrorKind     string   `json:"group_resolution_error_kind,omitempty"`
+	GroupResolutionErrorMessage  string   `json:"group_resolution_error_message,omitempty"`
+	DirectGroupCount             int      `json:"direct_group_count"`
 	DirectGroupIDs               []string `json:"direct_group_ids"`
 	DirectGroupDisplayNames      []string `json:"direct_group_display_names"`
 	ObservedCoveringPolicyIDs    []string `json:"observed_covering_policy_ids"`
@@ -51,6 +55,17 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 		}
 		groupsByPrincipalID[id] = append(groupsByPrincipalID[id], membership)
 	}
+	resolutionByPrincipalID := make(map[string]facts.PrincipalGroupResolution)
+	for _, resolution := range bundle.PrincipalGroupResolutions {
+		id := strings.TrimSpace(resolution.PrincipalID)
+		if id == "" {
+			continue
+		}
+		if _, exists := resolutionByPrincipalID[id]; exists {
+			continue
+		}
+		resolutionByPrincipalID[id] = resolution
+	}
 
 	principals := append([]facts.PrivilegedPrincipal(nil), bundle.PrivilegedPrincipals...)
 	sort.Slice(principals, func(i, j int) bool {
@@ -69,6 +84,7 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 		principalGroups := groupsByPrincipalID[strings.TrimSpace(principal.PrincipalID)]
 		directGroupIDs := mergeDirectGroupIDs(principalGroups)
 		directGroupNames := mergeDirectGroupNames(principalGroups)
+		groupResolution, hasGroupResolution := resolutionByPrincipalID[strings.TrimSpace(principal.PrincipalID)]
 
 		evidence := PrivilegedPrincipalCAEvidence{
 			PrincipalID:             principal.PrincipalID,
@@ -79,6 +95,27 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 			DirectGroupIDs:          directGroupIDs,
 			DirectGroupDisplayNames: directGroupNames,
 			Limitations:             defaultPrivilegedCALimitations(),
+		}
+		if hasGroupResolution {
+			evidence.DirectGroupCount = groupResolution.DirectGroupCount
+			if groupResolution.Resolved {
+				evidence.GroupResolutionStatus = "resolved"
+			} else {
+				evidence.GroupResolutionStatus = "failed"
+				evidence.GroupResolutionErrorKind = strings.TrimSpace(groupResolution.ErrorKind)
+				evidence.GroupResolutionErrorMessage = strings.TrimSpace(groupResolution.ErrorMessage)
+				evidence.Limitations = append(
+					evidence.Limitations,
+					"Direct group membership resolution failed for this principal; group-targeted coverage or exclusion evidence may be incomplete.",
+				)
+			}
+		} else {
+			evidence.GroupResolutionStatus = "unknown"
+			evidence.DirectGroupCount = len(directGroupIDs)
+			evidence.Limitations = append(
+				evidence.Limitations,
+				"Direct group membership resolution status is unknown for this principal; group-targeted coverage or exclusion evidence may be incomplete.",
+			)
 		}
 
 		coveringIDs := make(map[string]struct{})

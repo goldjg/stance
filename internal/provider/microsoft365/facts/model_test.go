@@ -10,7 +10,7 @@ func TestBundleUnmarshalDefaultsMissingSlices(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"service":"microsoft-graph"}`), &bundle); err != nil {
 		t.Fatalf("unmarshal bundle: %v", err)
 	}
-	if bundle.Organization == nil || bundle.CAPolicies == nil || bundle.DirectoryRoleDefinitions == nil || bundle.DirectoryRoleAssignments == nil || bundle.PrivilegedPrincipals == nil || bundle.PrincipalGroupMemberships == nil {
+	if bundle.Organization == nil || bundle.CAPolicies == nil || bundle.DirectoryRoleDefinitions == nil || bundle.DirectoryRoleAssignments == nil || bundle.PrivilegedPrincipals == nil || bundle.PrincipalGroupMemberships == nil || bundle.PrincipalGroupResolutions == nil {
 		t.Fatalf("expected all bundle slices to default to empty, got %+v", bundle)
 	}
 }
