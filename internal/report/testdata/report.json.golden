@@ -1,0 +1,21 @@
+{
+  "findings": [
+    {
+      "rule_id": "ENTRA-CA-001",
+      "title": "Disabled Conditional Access policies are identified",
+      "severity": "medium",
+      "status": "fail",
+      "summary": "Detected disabled policies.",
+      "matched_items": [
+        "Disabled policy"
+      ]
+    },
+    {
+      "rule_id": "ENTRA-CA-002",
+      "title": "Report-only Conditional Access policies are identified",
+      "severity": "low",
+      "status": "pass",
+      "summary": "No report-only policies detected."
+    }
+  ]
+}

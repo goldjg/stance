@@ -1,0 +1,23 @@
+{
+  "id": "policy-1",
+  "displayName": "Require MFA for admins",
+  "state": "enabled",
+  "conditions": {
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["breakglass-user-id"],
+      "includeGroups": ["group-a"],
+      "excludeGroups": [],
+      "includeRoles": ["62e90394-69f5-4237-9190-012177145e10"],
+      "excludeRoles": []
+    }
+  },
+  "grantControls": {
+    "builtInControls": ["mfa"]
+  },
+  "sessionControls": {
+    "authenticationStrength": {
+      "displayName": "Multifactor authentication"
+    }
+  }
+}
