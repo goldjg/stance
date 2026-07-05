@@ -2,6 +2,13 @@ package rules
 
 import corerules "github.com/goldjg/stance/internal/core/rules"
 
+func BuiltinRules() []corerules.Rule {
+	out := make([]corerules.Rule, 0, len(BuiltinConditionalAccessRules())+len(BuiltinDirectoryRoleRules()))
+	out = append(out, BuiltinConditionalAccessRules()...)
+	out = append(out, BuiltinDirectoryRoleRules()...)
+	return out
+}
+
 func BuiltinConditionalAccessRules() []corerules.Rule {
 	return []corerules.Rule{
 		{
@@ -58,6 +65,33 @@ func BuiltinConditionalAccessRules() []corerules.Rule {
 			DataRequirements:    []string{"conditional_access_policies"},
 			Remediation:         "Review user exclusions and validate emergency-access intent out of band. Excluded users alone do not prove break-glass coverage.",
 			References:          []string{"https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access"},
+		},
+	}
+}
+
+func BuiltinDirectoryRoleRules() []corerules.Rule {
+	return []corerules.Rule{
+		{
+			ID:                  "ENTRA-ROLE-001",
+			Title:               "Privileged directory role assignments are observed",
+			Severity:            corerules.SeverityLow,
+			Category:            "directory-role-assignments",
+			Service:             "entra",
+			RequiredPermissions: []string{"RoleManagement.Read.Directory"},
+			DataRequirements:    []string{"directory_role_definitions", "directory_role_assignments", "privileged_principals"},
+			Remediation:         "Use this visibility signal to validate privileged principal inventory and drive follow-up control review.",
+			References:          []string{"https://learn.microsoft.com/graph/api/resources/unifiedroleassignment?view=graph-rest-1.0"},
+		},
+		{
+			ID:                  "ENTRA-ROLE-002",
+			Title:               "Privileged role assignments with incomplete principal details are observed",
+			Severity:            corerules.SeverityLow,
+			Category:            "directory-role-assignments",
+			Service:             "entra",
+			RequiredPermissions: []string{"RoleManagement.Read.Directory"},
+			DataRequirements:    []string{"directory_role_assignments"},
+			Remediation:         "Review principal detail resolution coverage; Directory.Read.All may be required for complete principal metadata in some tenants.",
+			References:          []string{"https://learn.microsoft.com/graph/api/directoryobject-get?view=graph-rest-1.0"},
 		},
 	}
 }

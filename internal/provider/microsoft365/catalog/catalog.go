@@ -47,7 +47,7 @@ func Suites() []corecatalog.SuiteInfo {
 }
 
 func Checks() []corecatalog.CheckInfo {
-	rules := microsoft365rules.BuiltinConditionalAccessRules()
+	rules := microsoft365rules.BuiltinRules()
 	out := make([]corecatalog.CheckInfo, 0, len(rules))
 
 	for _, rule := range rules {

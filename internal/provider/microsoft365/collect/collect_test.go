@@ -45,7 +45,7 @@ func TestMapCAPolicyFromFixture(t *testing.T) {
 }
 
 func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
-	var hitOrg, hitCA bool
+	var hitOrg, hitCA, hitRoleDefs, hitRoleAssignments, hitPrincipal bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/organization":
@@ -54,6 +54,15 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 		case "/v1.0/identity/conditionalAccess/policies":
 			hitCA = true
 			_, _ = w.Write([]byte(`{"value":[{"id":"policy-1","displayName":"P1","state":"enabled","conditions":{"users":{}}}]}`))
+		case "/v1.0/roleManagement/directory/roleDefinitions":
+			hitRoleDefs = true
+			_, _ = w.Write([]byte(`{"value":[{"id":"role-1","displayName":"Global Administrator","isBuiltIn":true}]}`))
+		case "/v1.0/roleManagement/directory/roleAssignments":
+			hitRoleAssignments = true
+			_, _ = w.Write([]byte(`{"value":[{"id":"assign-1","roleDefinitionId":"role-1","principalId":"principal-1","principalType":"user"}]}`))
+		case "/v1.0/directoryObjects/principal-1":
+			hitPrincipal = true
+			_, _ = w.Write([]byte(`{"id":"principal-1","@odata.type":"#microsoft.graph.user","displayName":"Alice Admin","userPrincipalName":"alice@contoso.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -70,13 +79,29 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunDefault returned error: %v", err)
 	}
-	if !hitOrg || !hitCA {
-		t.Fatalf("expected both org and ca endpoints to be called, hitOrg=%v hitCA=%v", hitOrg, hitCA)
+	if !hitOrg || !hitCA || !hitRoleDefs || !hitRoleAssignments || !hitPrincipal {
+		t.Fatalf(
+			"expected org/ca/role endpoints to be called, hitOrg=%v hitCA=%v hitRoleDefs=%v hitRoleAssignments=%v hitPrincipal=%v",
+			hitOrg,
+			hitCA,
+			hitRoleDefs,
+			hitRoleAssignments,
+			hitPrincipal,
+		)
 	}
 	if len(bundle.Organization) != 1 {
 		t.Fatalf("expected 1 organization record, got %d", len(bundle.Organization))
 	}
 	if len(bundle.CAPolicies) != 1 {
 		t.Fatalf("expected 1 ca policy record, got %d", len(bundle.CAPolicies))
+	}
+	if len(bundle.DirectoryRoleDefinitions) != 1 {
+		t.Fatalf("expected 1 role definition record, got %d", len(bundle.DirectoryRoleDefinitions))
+	}
+	if len(bundle.DirectoryRoleAssignments) != 1 {
+		t.Fatalf("expected 1 role assignment record, got %d", len(bundle.DirectoryRoleAssignments))
+	}
+	if len(bundle.PrivilegedPrincipals) != 1 {
+		t.Fatalf("expected 1 privileged principal, got %d", len(bundle.PrivilegedPrincipals))
 	}
 }

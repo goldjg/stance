@@ -21,15 +21,15 @@ func TestSuitesIncludesEntra(t *testing.T) {
 	if suite.ID != "entra" {
 		t.Fatalf("expected entra suite, got %s", suite.ID)
 	}
-	if suite.CheckCount != 5 {
-		t.Fatalf("expected 5 checks in entra suite, got %d", suite.CheckCount)
+	if suite.CheckCount != 7 {
+		t.Fatalf("expected 7 checks in entra suite, got %d", suite.CheckCount)
 	}
 }
 
 func TestChecksFromRuleMetadata(t *testing.T) {
 	checks := Checks()
-	if len(checks) != 5 {
-		t.Fatalf("expected 5 checks, got %d", len(checks))
+	if len(checks) != 7 {
+		t.Fatalf("expected 7 checks, got %d", len(checks))
 	}
 
 	first := checks[0]

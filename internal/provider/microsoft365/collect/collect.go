@@ -17,6 +17,7 @@ func RunDefault(ctx context.Context, client *graph.Client) (facts.Bundle, error)
 	collectors := []Collector{
 		OrganizationCollector{},
 		ConditionalAccessCollector{},
+		DirectoryRoleCollector{},
 	}
 
 	for _, collector := range collectors {

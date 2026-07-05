@@ -12,6 +12,7 @@ var suitePermissions = map[string][]string{
 	"entra": {
 		"Organization.Read.All",
 		"Policy.Read.All",
+		"RoleManagement.Read.Directory",
 	},
 }
 
@@ -35,7 +36,7 @@ func (Resolver) ForChecks(checkIDs []string) ([]string, error) {
 	}
 
 	ruleByID := make(map[string]corerules.Rule)
-	for _, r := range providerrules.BuiltinConditionalAccessRules() {
+	for _, r := range providerrules.BuiltinRules() {
 		ruleByID[r.ID] = r
 	}
 
