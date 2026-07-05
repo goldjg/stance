@@ -142,6 +142,26 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 	return summary
 }
 
+func normalizePrivilegedCAEvidenceSummary(summary PrivilegedCAEvidenceSummary) PrivilegedCAEvidenceSummary {
+	out := summary
+	out.Principals = append([]PrivilegedPrincipalCAEvidence(nil), summary.Principals...)
+	sort.Slice(out.Principals, func(i, j int) bool {
+		return out.Principals[i].PrincipalID < out.Principals[j].PrincipalID
+	})
+	for i := range out.Principals {
+		principal := &out.Principals[i]
+		principal.RoleDisplayNames = sortedStrings(principal.RoleDisplayNames)
+		principal.ObservedCoveringPolicyIDs = sortedStrings(principal.ObservedCoveringPolicyIDs)
+		principal.ObservedCoveringPolicyNames = sortedStrings(principal.ObservedCoveringPolicyNames)
+		principal.ObservedExcludingPolicyIDs = sortedStrings(principal.ObservedExcludingPolicyIDs)
+		principal.ObservedExcludingPolicyNames = sortedStrings(principal.ObservedExcludingPolicyNames)
+		principal.CoverageEvidence = sortedStrings(principal.CoverageEvidence)
+		principal.ExclusionEvidence = sortedStrings(principal.ExclusionEvidence)
+		principal.Limitations = sortedStrings(principal.Limitations)
+	}
+	return out
+}
+
 func mergeRoleIDs(roleIDs []string, assignments []facts.DirectoryRoleAssignment) []string {
 	set := make(map[string]struct{})
 	for _, roleID := range roleIDs {
@@ -247,4 +267,10 @@ func defaultPrivilegedCALimitations() []string {
 		"Conditional Access conditions (for example app, platform, client app, location, or risk) can materially change effective coverage.",
 		"Report-only policies are intentionally excluded from enforcement evidence.",
 	}
+}
+
+func sortedStrings(values []string) []string {
+	out := append([]string(nil), values...)
+	sort.Strings(out)
+	return out
 }

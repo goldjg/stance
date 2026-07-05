@@ -83,6 +83,8 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 	})
 
 	privilegedCAEvidence := DerivePrivilegedCAEvidence(bundle)
+	privilegedCAEvidence = normalizePrivilegedCAEvidenceSummary(privilegedCAEvidence)
+	privilegedCAFindingDetails := privilegedCAEvidenceDetails(privilegedCAEvidence)
 
 	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-006",
@@ -91,6 +93,7 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 		Status:       coreeval.StatusInfo,
 		Summary:      summarizePrivilegedCoverageEvidence(privilegedCAEvidence),
 		MatchedItems: matchedCoveragePrincipals(privilegedCAEvidence),
+		Details:      privilegedCAFindingDetails,
 	})
 
 	findings = append(findings, coreeval.Finding{
@@ -100,6 +103,7 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 		Status:       coreeval.StatusInfo,
 		Summary:      summarizePrivilegedExclusionEvidence(privilegedCAEvidence),
 		MatchedItems: matchedExclusionEvidence(privilegedCAEvidence),
+		Details:      privilegedCAFindingDetails,
 	})
 
 	findings = append(findings, coreeval.Finding{
@@ -109,6 +113,7 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 		Status:       coreeval.StatusInfo,
 		Summary:      summarizePrivilegedUnknownCoverage(privilegedCAEvidence),
 		MatchedItems: matchedUnknownCoveragePrincipals(privilegedCAEvidence),
+		Details:      privilegedCAFindingDetails,
 	})
 
 	roleAssignments := bundle.DirectoryRoleAssignments
@@ -300,4 +305,36 @@ func principalLabel(principal PrivilegedPrincipalCAEvidence) string {
 		return principal.UserPrincipalName
 	}
 	return principal.PrincipalID
+}
+
+func privilegedCAEvidenceDetails(summary PrivilegedCAEvidenceSummary) map[string]any {
+	principals := make([]map[string]any, 0, len(summary.Principals))
+	for _, principal := range summary.Principals {
+		principals = append(principals, map[string]any{
+			"principal_id":                    principal.PrincipalID,
+			"principal_type":                  principal.PrincipalType,
+			"display_name":                    principal.DisplayName,
+			"user_principal_name":             principal.UserPrincipalName,
+			"role_display_names":              append([]string(nil), principal.RoleDisplayNames...),
+			"observed_covering_policy_ids":    append([]string(nil), principal.ObservedCoveringPolicyIDs...),
+			"observed_covering_policy_names":  append([]string(nil), principal.ObservedCoveringPolicyNames...),
+			"observed_excluding_policy_ids":   append([]string(nil), principal.ObservedExcludingPolicyIDs...),
+			"observed_excluding_policy_names": append([]string(nil), principal.ObservedExcludingPolicyNames...),
+			"coverage_evidence":               append([]string(nil), principal.CoverageEvidence...),
+			"exclusion_evidence":              append([]string(nil), principal.ExclusionEvidence...),
+			"limitations":                     append([]string(nil), principal.Limitations...),
+		})
+	}
+	return map[string]any{
+		"privileged_ca_evidence": map[string]any{
+			"summary": map[string]any{
+				"total_privileged_principals":                 summary.TotalPrivilegedPrincipals,
+				"principals_with_coverage_evidence":           summary.PrincipalsWithCoverageEvidence,
+				"principals_with_direct_exclusion_evidence":   summary.PrincipalsWithDirectExclusionEvidence,
+				"principals_with_possible_exclusion_evidence": summary.PrincipalsWithPossibleExclusionEvidence,
+				"principals_with_unknown_coverage":            summary.PrincipalsWithUnknownCoverage,
+			},
+			"principals": principals,
+		},
+	}
 }

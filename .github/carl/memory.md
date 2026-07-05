@@ -73,3 +73,6 @@
 - This slice adds no new providers and no non-Entra workload expansion.
 - `RoleManagement.Read.Directory` is required for directory role assignment collection; `Directory.Read.All` may be required for principal detail resolution.
 - This collector expansion adds no PowerShell/runtime/module dependencies, no shell-outs, and no Microsoft SDK dependency.
+- STANCE durable result JSON can carry optional provider-generated structured finding details through provider-neutral core finding fields.
+- Privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) now include per-principal machine-readable evidence details in JSON results.
+- Human-readable outputs (Markdown/HTML) and SARIF remain summary-oriented for privileged CA evidence in this phase.

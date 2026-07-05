@@ -192,6 +192,9 @@ func TestEvaluateDefaultPrivilegedCAEvidenceChecksStayCautious(t *testing.T) {
 	if unknown.Status != coreeval.StatusInfo || !strings.Contains(unknown.Summary, "not yet implemented") {
 		t.Fatalf("expected cautious ENTRA-CA-008 summary, got %+v", unknown)
 	}
+	assertPrivilegedCAEvidenceDetails(t, coverage)
+	assertPrivilegedCAEvidenceDetails(t, exclusions)
+	assertPrivilegedCAEvidenceDetails(t, unknown)
 }
 
 func findingByRuleID(result coreeval.Result, ruleID string) coreeval.Finding {
@@ -201,4 +204,33 @@ func findingByRuleID(result coreeval.Result, ruleID string) coreeval.Finding {
 		}
 	}
 	return coreeval.Finding{}
+}
+
+func assertPrivilegedCAEvidenceDetails(t *testing.T, finding coreeval.Finding) {
+	t.Helper()
+	root, ok := finding.Details["privileged_ca_evidence"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected privileged_ca_evidence details on %s, got %#v", finding.RuleID, finding.Details)
+	}
+	summary, ok := root["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected summary object in details on %s, got %#v", finding.RuleID, root["summary"])
+	}
+	for _, key := range []string{
+		"total_privileged_principals",
+		"principals_with_coverage_evidence",
+		"principals_with_direct_exclusion_evidence",
+		"principals_with_possible_exclusion_evidence",
+		"principals_with_unknown_coverage",
+	} {
+		if _, exists := summary[key]; !exists {
+			t.Fatalf("expected summary key %q on %s, got %#v", key, finding.RuleID, summary)
+		}
+	}
+	if _, ok := root["principals"].([]map[string]any); ok {
+		return
+	}
+	if _, ok := root["principals"].([]any); !ok {
+		t.Fatalf("expected principals array in details on %s, got %#v", finding.RuleID, root["principals"])
+	}
 }

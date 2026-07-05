@@ -88,6 +88,79 @@ func TestRunCheckJSON(t *testing.T) {
 	}
 }
 
+func TestRunCheckJSONIncludesPrivilegedCAEvidenceDetails(t *testing.T) {
+	tmpDir := t.TempDir()
+	factsPath := filepath.Join(tmpDir, "facts.json")
+	factsPayload := `{
+  "conditional_access_policies":[
+    {"id":"policy-1","display_name":"Privileged role MFA","state":"enabled","included_roles":["role-1"],"excluded_users":["principal-1"],"built_in_controls":["mfa"]}
+  ],
+  "directory_role_assignments":[
+    {"id":"assign-1","role_definition_id":"role-1","role_display_name":"Global Administrator","principal_id":"principal-1","principal_display_name":"Alice","source":"graph:/v1.0/roleManagement/directory/roleAssignments"},
+    {"id":"assign-2","role_definition_id":"role-2","role_display_name":"Privileged Role Administrator","principal_id":"principal-2","principal_display_name":"Bob","source":"graph:/v1.0/roleManagement/directory/roleAssignments"}
+  ],
+  "privileged_principals":[
+    {"principal_id":"principal-1","principal_type":"user","display_name":"Alice","user_principal_name":"alice@example.com","role_definition_ids":["role-1"],"role_display_names":["Global Administrator"]},
+    {"principal_id":"principal-2","principal_type":"user","display_name":"Bob","user_principal_name":"bob@example.com","role_definition_ids":["role-2"],"role_display_names":["Privileged Role Administrator"]}
+  ]
+}`
+	if err := os.WriteFile(factsPath, []byte(factsPayload), 0o600); err != nil {
+		t.Fatalf("write facts: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"check", "--facts", factsPath, "--format", "json"}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+
+	var parsed map[string]any
+	if decodeErr := json.Unmarshal(out.Bytes(), &parsed); decodeErr != nil {
+		t.Fatalf("expected json output, decode error: %v; output=%q", decodeErr, out.String())
+	}
+
+	findings, ok := parsed["findings"].([]any)
+	if !ok {
+		t.Fatalf("expected findings array, got %#v", parsed["findings"])
+	}
+	targets := map[string]struct{}{
+		"ENTRA-CA-006": {},
+		"ENTRA-CA-007": {},
+		"ENTRA-CA-008": {},
+	}
+	found := 0
+	for _, item := range findings {
+		finding, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		ruleID, _ := finding["rule_id"].(string)
+		if _, wanted := targets[ruleID]; !wanted {
+			continue
+		}
+		found++
+		details, ok := finding["details"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected details object on %s, got %#v", ruleID, finding["details"])
+		}
+		evidence, ok := details["privileged_ca_evidence"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected privileged_ca_evidence on %s, got %#v", ruleID, details["privileged_ca_evidence"])
+		}
+		if _, ok := evidence["summary"].(map[string]any); !ok {
+			t.Fatalf("expected summary object on %s, got %#v", ruleID, evidence["summary"])
+		}
+		if _, ok := evidence["principals"].([]any); !ok {
+			t.Fatalf("expected principals array on %s, got %#v", ruleID, evidence["principals"])
+		}
+	}
+	if found != 3 {
+		t.Fatalf("expected details for 3 privileged CA findings, found %d", found)
+	}
+}
+
 func TestRunCheckHTML(t *testing.T) {
 	tmpDir := t.TempDir()
 	factsPath := filepath.Join(tmpDir, "facts.json")
@@ -279,6 +352,80 @@ func TestRunReportWritesOutputFile(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("expected 0600 mode, got %o", info.Mode().Perm())
+	}
+}
+
+func TestRunReportJSONPreservesDetails(t *testing.T) {
+	tmpDir := t.TempDir()
+	resultsPath := filepath.Join(tmpDir, "results.json")
+	resultsPayload := `{
+  "schema_version": "stance.result.v1",
+  "generated_at_utc": "2026-07-05T18:16:07Z",
+  "tool": {"name": "stance", "version": "dev", "commit": "none", "date": "unknown"},
+  "provider": "microsoft365",
+  "suite": "entra",
+  "findings": [
+    {
+      "rule_id":"ENTRA-CA-006",
+      "title":"Privileged principal Conditional Access coverage evidence is observed",
+      "severity":"low",
+      "status":"info",
+      "summary":"Observed enforcing Conditional Access coverage evidence.",
+      "details":{
+        "privileged_ca_evidence":{
+          "summary":{
+            "total_privileged_principals":2,
+            "principals_with_coverage_evidence":1,
+            "principals_with_direct_exclusion_evidence":1,
+            "principals_with_possible_exclusion_evidence":0,
+            "principals_with_unknown_coverage":1
+          },
+          "principals":[
+            {"principal_id":"principal-1","coverage_evidence":["Observed enabled policy"],"limitations":["Group membership expansion is not implemented in this release."]},
+            {"principal_id":"principal-2","coverage_evidence":[],"limitations":["Group membership expansion is not implemented in this release."]}
+          ]
+        }
+      }
+    }
+  ]
+}`
+	if err := os.WriteFile(resultsPath, []byte(resultsPayload), 0o600); err != nil {
+		t.Fatalf("write results: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	code := run([]string{"report", "--results", resultsPath, "--format", "json"}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+
+	var parsed map[string]any
+	if decodeErr := json.Unmarshal(out.Bytes(), &parsed); decodeErr != nil {
+		t.Fatalf("expected json output, decode error: %v; output=%q", decodeErr, out.String())
+	}
+	findings, ok := parsed["findings"].([]any)
+	if !ok || len(findings) != 1 {
+		t.Fatalf("expected one finding in output, got %#v", parsed["findings"])
+	}
+	finding, ok := findings[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected finding object, got %#v", findings[0])
+	}
+	details, ok := finding["details"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected details object, got %#v", finding["details"])
+	}
+	evidence, ok := details["privileged_ca_evidence"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected privileged_ca_evidence object, got %#v", details["privileged_ca_evidence"])
+	}
+	summary, ok := evidence["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected summary object, got %#v", evidence["summary"])
+	}
+	if summary["total_privileged_principals"] != float64(2) {
+		t.Fatalf("unexpected summary content after report conversion: %#v", summary)
 	}
 }
 

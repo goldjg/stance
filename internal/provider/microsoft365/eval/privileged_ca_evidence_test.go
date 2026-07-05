@@ -122,3 +122,41 @@ func TestDerivePrivilegedCAEvidencePossibleExclusionWhenPrincipalCannotBeProven(
 		t.Fatalf("expected possible exclusion evidence line, got %+v", summary.Principals[0].ExclusionEvidence)
 	}
 }
+
+func TestNormalizePrivilegedCAEvidenceSummarySortsNestedCollections(t *testing.T) {
+	normalized := normalizePrivilegedCAEvidenceSummary(PrivilegedCAEvidenceSummary{
+		Principals: []PrivilegedPrincipalCAEvidence{
+			{
+				PrincipalID:                  "principal-b",
+				RoleDisplayNames:             []string{"Role Z", "Role A"},
+				ObservedCoveringPolicyIDs:    []string{"policy-b", "policy-a"},
+				ObservedCoveringPolicyNames:  []string{"Policy Z", "Policy A"},
+				ObservedExcludingPolicyIDs:   []string{"exclude-b", "exclude-a"},
+				ObservedExcludingPolicyNames: []string{"Exclude Z", "Exclude A"},
+				CoverageEvidence:             []string{"z line", "a line"},
+				ExclusionEvidence:            []string{"z exclude", "a exclude"},
+				Limitations:                  []string{"z limitation", "a limitation"},
+			},
+			{
+				PrincipalID:      "principal-a",
+				RoleDisplayNames: []string{"Role B"},
+			},
+		},
+	})
+
+	if got := normalized.Principals[0].PrincipalID; got != "principal-a" {
+		t.Fatalf("expected principals sorted by principal id, got %s", got)
+	}
+	if strings.Join(normalized.Principals[1].RoleDisplayNames, ",") != "Role A,Role Z" {
+		t.Fatalf("expected role names sorted, got %#v", normalized.Principals[1].RoleDisplayNames)
+	}
+	if strings.Join(normalized.Principals[1].ObservedCoveringPolicyIDs, ",") != "policy-a,policy-b" {
+		t.Fatalf("expected covering policy ids sorted, got %#v", normalized.Principals[1].ObservedCoveringPolicyIDs)
+	}
+	if strings.Join(normalized.Principals[1].CoverageEvidence, ",") != "a line,z line" {
+		t.Fatalf("expected coverage evidence sorted, got %#v", normalized.Principals[1].CoverageEvidence)
+	}
+	if strings.Join(normalized.Principals[1].Limitations, ",") != "a limitation,z limitation" {
+		t.Fatalf("expected limitations sorted, got %#v", normalized.Principals[1].Limitations)
+	}
+}

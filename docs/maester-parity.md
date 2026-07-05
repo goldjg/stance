@@ -13,6 +13,7 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Microsoft 365 implementation lives under `internal/provider/microsoft365/*`.
 - Current coverage is Entra Conditional Access plus Entra directory role definition/assignment collection with collect-once/evaluate-locally behavior.
 - Existing check outputs are JSON, Markdown, JUnit, HTML, and SARIF.
+- Durable result JSON includes machine-readable structured finding details for privileged-principal Conditional Access evidence (`ENTRA-CA-006/007/008`) to improve CI/system handoff.
 
 ## Planned parity milestones
 
@@ -84,6 +85,7 @@ This matrix uses only these status values:
 - Broader Microsoft 365 checks and suites beyond current coverage.
 - Privileged account and emergency-access analysis remains partial/future; current CA and role checks are intentionally evidence-first and do not implement break-glass pass/fail decisions.
 - Group expansion, nested/dynamic group evaluation, and full Conditional Access What-If style simulation remain future work.
+- Full effective Conditional Access simulation and emergency-access assessment remain future work despite improved machine-readable evidence handoff.
 - Richer baseline/compliance mapping and configuration controls.
 - Drift history and longitudinal comparison workflows.
 - Azure DevOps integration examples/documentation parity with GitHub examples.

@@ -224,6 +224,10 @@ Additional implemented checks:
 
 STANCE now correlates privileged role-assignment facts with Conditional Access policy facts to produce cautious privileged-principal evidence. This evidence is intentionally not a full effective-policy proof.
 
+Durable result JSON now also carries optional structured finding details for privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) under `details.privileged_ca_evidence` for machine-readable handoff. Markdown, HTML, JUnit, and SARIF outputs remain summary-oriented and do not dump full per-principal evidence payloads.
+
+Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, and observed policy identifiers).
+
 Current limitations:
 
 - Group membership expansion is not implemented.
