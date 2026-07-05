@@ -313,6 +313,20 @@ func runChecks(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	if suite != "" {
+		known := false
+		for _, suiteInfo := range microsoft365catalog.Suites() {
+			if suiteInfo.ID == suite {
+				known = true
+				break
+			}
+		}
+		if !known {
+			fmt.Fprintf(stderr, "unknown suite: %s\n", suite)
+			return 1
+		}
+	}
+
 	checks := microsoft365catalog.Checks()
 	if suite != "" {
 		out := make([]corecatalog.CheckInfo, 0, len(checks))

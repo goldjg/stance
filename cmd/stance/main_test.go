@@ -244,3 +244,16 @@ func TestRunChecksUnsupportedProvider(t *testing.T) {
 		t.Fatalf("unexpected stderr: %q", err.String())
 	}
 }
+
+func TestRunChecksUnknownSuite(t *testing.T) {
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"checks", "--suite", "unknown-suite"}, &out, &err)
+	if code == 0 {
+		t.Fatalf("expected failure for unknown suite")
+	}
+	if !strings.Contains(err.String(), "unknown suite: unknown-suite") {
+		t.Fatalf("unexpected stderr: %q", err.String())
+	}
+}
