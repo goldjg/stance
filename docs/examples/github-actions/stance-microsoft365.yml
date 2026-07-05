@@ -24,28 +24,21 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Exchange GitHub OIDC token for Entra federated assertion/token file
-        run: |
-          echo "Placeholder step."
-          echo "Implement your own OIDC token exchange flow here."
-          echo "Provide STANCE_TENANT_ID, STANCE_CLIENT_ID, and"
-          echo "STANCE_FEDERATED_TOKEN_FILE (or STANCE_CLIENT_ASSERTION)."
-          echo "STANCE_FEDERATED_TOKEN_FILE=${RUNNER_TEMP}/entra-federated-token.jwt" >> "${GITHUB_ENV}"
-
       - name: Run STANCE (live collection)
         id: stance
         uses: ./
         with:
+          auth-mode: github-oidc
+          tenant-id: ${{ vars.STANCE_TENANT_ID }}
+          client-id: ${{ vars.STANCE_CLIENT_ID }}
           provider: microsoft365
           suite: entra
           formats: json,html,sarif
           output-directory: stance-results
-        env:
-          STANCE_TENANT_ID: ${{ vars.STANCE_TENANT_ID }}
-          STANCE_CLIENT_ID: ${{ vars.STANCE_CLIENT_ID }}
-          STANCE_FEDERATED_TOKEN_FILE: ${{ env.STANCE_FEDERATED_TOKEN_FILE }}
-          # Fallback only:
-          # STANCE_CLIENT_SECRET: ${{ secrets.STANCE_CLIENT_SECRET }}
+          # Entra app/service principal setup is external to STANCE.
+          # Configure a federated identity credential for this repo/ref/environment.
+          # GitHub supplies the OIDC assertion; Entra validates it during client assertion token acquisition.
+          # STANCE does not create that trust relationship.
 
       - name: Upload SARIF
         if: ${{ steps.stance.outputs.sarif-path != '' }}
@@ -62,4 +55,3 @@ jobs:
             ${{ steps.stance.outputs.results-path }}
             ${{ steps.stance.outputs.html-path }}
             ${{ steps.stance.outputs.sarif-path }}
-

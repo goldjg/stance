@@ -1,25 +1,26 @@
 # Current PR contract
 
 ## PR focus
-Add initial GitHub Action packaging and documentation for STANCE.
+Improve GitHub Action live-collection auth ergonomics with action-native GitHub OIDC assertion acquisition.
 
 ## Included
-- Add root `action.yml` composite action for STANCE local-build execution.
-- Add example workflows under `docs/examples/github-actions/`:
-  - `stance-microsoft365.yml`
-  - `stance-facts-only.yml`
-- Add `docs/github-action.md` with action contract and usage guidance.
-- Update `README.md` with GitHub Action section and docs link.
-- Update `docs/maester-parity.md` CI/CD and integration parity status notes.
-- Update `.github/carl/memory.md` with durable action/auth/SARIF truths.
-- Update current PR contract for focused scope and exclusions.
+- Update root `action.yml` auth inputs and mode handling (`env`, `github-oidc`).
+- Add action-native GitHub OIDC assertion acquisition for live collection and export to `STANCE_CLIENT_ASSERTION`.
+- Preserve facts-only behavior and existing env-driven auth behavior.
+- Update docs/examples:
+  - `docs/examples/github-actions/stance-microsoft365.yml`
+  - `docs/github-action.md`
+- Update `README.md` GitHub Action section and docs link.
+- Update `docs/maester-parity.md` parity status wording for GitHub Action/OIDC progress.
+- Update `.github/carl/memory.md` with durable OIDC/auth truths.
+- Update this PR contract for focused scope and exclusions.
 
 ## Excluded
+- Entra app/service principal provisioning and federated credential creation.
 - New Microsoft API collectors.
 - New posture checks.
 - New providers.
 - Released binary install mode in the action.
-- GitHub OIDC-to-Entra token exchange implementation.
 - `fail-on-findings` behavior wiring if not already present.
 - Release pipeline implementation changes (except documentation references).
 

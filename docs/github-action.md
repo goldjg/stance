@@ -1,20 +1,18 @@
-# STANCE GitHub Action (initial)
+# STANCE GitHub Action
 
 ## Purpose
 
-The STANCE GitHub Action provides a repository-local wrapper for running posture
-evaluation in GitHub Actions using the STANCE CLI from this repository.
+The STANCE GitHub Action is a repository-local composite action that builds and
+runs STANCE from checked-out source.
 
 ## Current status
 
-This is the initial implementation:
-
 - Composite action at repository root (`action.yml`)
-- Builds `stance` locally from checked-out source
-- Runs collect/check/report flow for `microsoft365`
-- Supports facts-only evaluation without Microsoft authentication
+- Local build execution (`stance-version: local`) only
+- Live collection and facts-only evaluation paths
+- Action-native optional GitHub OIDC assertion acquisition for live collection
 
-Released-binary install mode is planned but not included in this version.
+Released-binary install mode is still planned and not implemented yet.
 
 Reference example workflow files:
 
@@ -30,6 +28,10 @@ Reference example workflow files:
 | `output-directory` | `stance-results` | Directory for generated facts, result JSON, and reports. |
 | `formats` | `json,html,sarif` | Comma-separated report formats to generate (`json`, `html`, `sarif`, `md`/`markdown`, `junit`). |
 | `facts-path` | `""` | Existing facts JSON to evaluate instead of live collection. |
+| `auth-mode` | `env` | Live-collection auth source: `env` or `github-oidc`. |
+| `oidc-audience` | `api://AzureADTokenExchange` | Audience value used when requesting GitHub OIDC token in `github-oidc` mode. |
+| `tenant-id` | `""` | Optional tenant ID exported as `STANCE_TENANT_ID` when set. |
+| `client-id` | `""` | Optional client/application ID exported as `STANCE_CLIENT_ID` when set. |
 | `stance-version` | `local` | Version source. Only `local` is currently supported. |
 | `fail-on-findings` | `false` | Reserved for future behavior; not implemented in this version. |
 
@@ -44,7 +46,41 @@ Reference example workflow files:
 | `markdown-path` | Markdown report path when `md` or `markdown` is requested. |
 | `junit-path` | JUnit XML report path when `junit` is requested. |
 
-## Live collection example
+## Authentication modes
+
+### `auth-mode: env`
+
+Use caller-provided environment auth variables for live collection.
+
+- The action does not fetch GitHub OIDC tokens in this mode.
+- Existing auth variables remain caller-controlled.
+- If `tenant-id`/`client-id` inputs are set, they are exported to
+  `STANCE_TENANT_ID`/`STANCE_CLIENT_ID`.
+- Live collection can use:
+  - `STANCE_CLIENT_ASSERTION`, or
+  - `STANCE_FEDERATED_TOKEN_FILE`, or
+  - `STANCE_CLIENT_SECRET` (fallback).
+
+### `auth-mode: github-oidc`
+
+Use GitHub's OIDC endpoint in the action to acquire a short-lived assertion and
+export it as `STANCE_CLIENT_ASSERTION` for live collection.
+
+- Requires workflow permission `id-token: write`.
+- Uses `oidc-audience` input when requesting the token.
+- Masks assertion material in logs and avoids token echoing.
+- If `tenant-id`/`client-id` inputs are set, they are exported for STANCE.
+
+When `facts-path` is provided, live collection is skipped and OIDC acquisition
+is skipped regardless of auth mode.
+
+Unsupported `auth-mode` values fail clearly.
+
+If `auth-mode: github-oidc` is selected but GitHub OIDC request environment
+variables are unavailable, the action fails with guidance to set
+`permissions: id-token: write`.
+
+## Live collection example (`github-oidc`)
 
 ```yaml
 permissions:
@@ -54,27 +90,21 @@ permissions:
 
 steps:
   - uses: actions/checkout@v4
-
   - uses: actions/setup-go@v5
     with:
       go-version-file: go.mod
-
-  - name: Exchange GitHub OIDC token for Entra federated assertion/token file
-    run: |
-      echo "Implement your OIDC token exchange here."
 
   - name: Run STANCE
     id: stance
     uses: ./
     with:
+      auth-mode: github-oidc
+      tenant-id: ${{ vars.STANCE_TENANT_ID }}
+      client-id: ${{ vars.STANCE_CLIENT_ID }}
       provider: microsoft365
       suite: entra
       formats: json,html,sarif
       output-directory: stance-results
-    env:
-      STANCE_TENANT_ID: ${{ vars.STANCE_TENANT_ID }}
-      STANCE_CLIENT_ID: ${{ vars.STANCE_CLIENT_ID }}
-      STANCE_FEDERATED_TOKEN_FILE: ${{ env.STANCE_FEDERATED_TOKEN_FILE }}
 ```
 
 ## Facts-only example
@@ -96,8 +126,22 @@ steps:
       output-directory: stance-results
 ```
 
-When `facts-path` is provided, the action skips live collection and does not
-require Microsoft authentication material.
+Facts-only mode remains auth-free.
+
+## Entra setup requirements (external to STANCE)
+
+`auth-mode: github-oidc` does not create Microsoft trust configuration.
+You must configure this externally:
+
+- An Entra app registration/service principal
+- A federated identity credential that trusts the GitHub
+  repository/ref/environment
+- Microsoft Graph application permissions required by selected STANCE suite
+
+For current `entra` suite collection:
+
+- `Organization.Read.All`
+- `Policy.Read.All`
 
 ## SARIF upload guidance
 
@@ -129,50 +173,19 @@ Upload output files using `actions/upload-artifact`:
       ${{ steps.stance.outputs.junit-path }}
 ```
 
-## Authentication
-
-STANCE currently expects environment-driven auth material for live collection.
-
-Preferred (WIF-first) variables:
-
-- `STANCE_TENANT_ID`
-- `STANCE_CLIENT_ID`
-- `STANCE_FEDERATED_TOKEN_FILE` or `STANCE_CLIENT_ASSERTION`
-
-Current limitation:
-
-- The action does not implement GitHub OIDC-to-Entra token exchange.
-- You must perform this exchange in your workflow before invoking STANCE.
-
-Fallback (less preferred):
-
-- `STANCE_CLIENT_SECRET` may be used for client-secret auth where needed.
-
-## Permissions
-
-GitHub workflow permissions for typical security integration:
-
-- `contents: read`
-- `id-token: write` (required for WIF token exchange flows)
-- `security-events: write` (required for SARIF upload)
-
-Microsoft Graph permissions currently required for `entra` suite collection:
-
-- `Organization.Read.All`
-- `Policy.Read.All`
-
 ## Security notes
 
-- Generated facts, results, and report artifacts may contain sensitive tenant
-  posture information.
-- Avoid long-lived/public artifact retention for sensitive tenants.
-- Do not echo secrets or token material in workflow logs.
+- GitHub OIDC tokens are short-lived; prefer this over long-lived secrets when
+  feasible.
+- Do not echo assertions/tokens in workflow logs.
+- Prefer repo/environment-scoped Entra federated credentials.
+- Avoid broad branch/ref patterns in federated credential trust when possible.
+- Generated facts/results/reports can contain sensitive tenant posture data.
 - STANCE SARIF output represents tenant posture findings, not source-code
   location vulnerabilities.
 
 ## Future work
 
 - Released-binary install mode for action execution.
-- Optional built-in helper for GitHub OIDC-to-Entra exchange flow.
 - `fail-on-findings` behavior support.
 - Scheduled drift comparison and historical run analysis patterns.

@@ -22,6 +22,22 @@ inputs:
     description: "Existing facts JSON to evaluate instead of collecting live facts."
     required: false
     default: ""
+  auth-mode:
+    description: "Authentication source for live collection. Supported values: env, github-oidc."
+    required: false
+    default: "env"
+  oidc-audience:
+    description: "Audience to request for the GitHub OIDC token."
+    required: false
+    default: "api://AzureADTokenExchange"
+  tenant-id:
+    description: "Optional Microsoft tenant ID. If set, exported as STANCE_TENANT_ID."
+    required: false
+    default: ""
+  client-id:
+    description: "Optional Microsoft client/application ID. If set, exported as STANCE_CLIENT_ID."
+    required: false
+    default: ""
   stance-version:
     description: "Version source. For this PR, only local is supported."
     required: false
@@ -71,6 +87,78 @@ runs:
         set -euo pipefail
         go build -o "${RUNNER_TEMP}/stance" ./cmd/stance
         chmod +x "${RUNNER_TEMP}/stance"
+
+    - name: Prepare authentication environment
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        facts_input="${{ inputs.facts-path }}"
+        facts_input="${facts_input#"${facts_input%%[![:space:]]*}"}"
+        facts_input="${facts_input%"${facts_input##*[![:space:]]}"}"
+
+        auth_mode="$(echo "${{ inputs.auth-mode }}" | tr '[:upper:]' '[:lower:]')"
+        tenant_id="${{ inputs.tenant-id }}"
+        client_id="${{ inputs.client-id }}"
+        oidc_audience="${{ inputs.oidc-audience }}"
+
+        if [ -n "${tenant_id}" ]; then
+          echo "STANCE_TENANT_ID=${tenant_id}" >> "${GITHUB_ENV}"
+        fi
+
+        if [ -n "${client_id}" ]; then
+          echo "STANCE_CLIENT_ID=${client_id}" >> "${GITHUB_ENV}"
+        fi
+
+        if [ -n "${facts_input}" ]; then
+          echo "facts-path provided; skipping live-collection auth preparation."
+          exit 0
+        fi
+
+        case "${auth_mode}" in
+          env)
+            ;;
+          github-oidc)
+            if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+              echo "GitHub OIDC request environment is unavailable for auth-mode=github-oidc."
+              echo "For live collection with github-oidc, set workflow permissions: id-token: write."
+              exit 1
+            fi
+
+            oidc_request_url="$(
+              OIDC_AUDIENCE="${oidc_audience}" python3 - <<'PY'
+import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+base = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
+audience = os.environ["OIDC_AUDIENCE"]
+
+parts = urlsplit(base)
+query = [(k, v) for (k, v) in parse_qsl(parts.query, keep_blank_values=True) if k != "audience"]
+query.append(("audience", audience))
+print(urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)))
+PY
+            )"
+
+            oidc_response="$(curl --fail --silent --show-error \
+              -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${oidc_request_url}")"
+            client_assertion="$(
+              OIDC_RESPONSE="${oidc_response}" python3 -c 'import json, os; payload = json.loads(os.environ["OIDC_RESPONSE"]); token = payload.get("value", ""); 
+if not token:
+    raise SystemExit("GitHub OIDC token response did not include a value field.")
+print(token, end="")'
+            )"
+
+            echo "::add-mask::${client_assertion}"
+            echo "STANCE_CLIENT_ASSERTION=${client_assertion}" >> "${GITHUB_ENV}"
+            ;;
+          *)
+            echo "Unsupported auth-mode: ${auth_mode}"
+            echo "Supported values: env, github-oidc"
+            exit 1
+            ;;
+        esac
 
     - name: Collect/check/report
       id: run
