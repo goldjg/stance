@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	coreeval "github.com/goldjg/stance/internal/core/eval"
 	corerules "github.com/goldjg/stance/internal/core/rules"
@@ -10,7 +11,7 @@ import (
 )
 
 func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
-	findings := make([]coreeval.Finding, 0, 7)
+	findings := make([]coreeval.Finding, 0, 10)
 
 	disabled := make([]string, 0)
 	reportOnly := make([]string, 0)
@@ -79,6 +80,35 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 		Status:       coreeval.StatusInfo,
 		Summary:      summarizeUserExclusions(privilegedWithUserExclusions),
 		MatchedItems: privilegedWithUserExclusions,
+	})
+
+	privilegedCAEvidence := DerivePrivilegedCAEvidence(bundle)
+
+	findings = append(findings, coreeval.Finding{
+		RuleID:       "ENTRA-CA-006",
+		Title:        "Privileged principal Conditional Access coverage evidence is observed",
+		Severity:     corerules.SeverityLow,
+		Status:       coreeval.StatusInfo,
+		Summary:      summarizePrivilegedCoverageEvidence(privilegedCAEvidence),
+		MatchedItems: matchedCoveragePrincipals(privilegedCAEvidence),
+	})
+
+	findings = append(findings, coreeval.Finding{
+		RuleID:       "ENTRA-CA-007",
+		Title:        "Privileged principal Conditional Access exclusion evidence is observed",
+		Severity:     corerules.SeverityLow,
+		Status:       coreeval.StatusInfo,
+		Summary:      summarizePrivilegedExclusionEvidence(privilegedCAEvidence),
+		MatchedItems: matchedExclusionEvidence(privilegedCAEvidence),
+	})
+
+	findings = append(findings, coreeval.Finding{
+		RuleID:       "ENTRA-CA-008",
+		Title:        "Privileged principal Conditional Access coverage remains unknown from current facts",
+		Severity:     corerules.SeverityLow,
+		Status:       coreeval.StatusInfo,
+		Summary:      summarizePrivilegedUnknownCoverage(privilegedCAEvidence),
+		MatchedItems: matchedUnknownCoveragePrincipals(privilegedCAEvidence),
 	})
 
 	roleAssignments := bundle.DirectoryRoleAssignments
@@ -201,4 +231,73 @@ func highImpactRoleNames(assignments []facts.DirectoryRoleAssignment) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func summarizePrivilegedCoverageEvidence(summary PrivilegedCAEvidenceSummary) string {
+	return fmt.Sprintf(
+		"Observed enforcing Conditional Access coverage evidence for %d of %d privileged principals. This is evidence-only visibility and does not prove complete effective coverage.",
+		summary.PrincipalsWithCoverageEvidence,
+		summary.TotalPrivilegedPrincipals,
+	)
+}
+
+func summarizePrivilegedExclusionEvidence(summary PrivilegedCAEvidenceSummary) string {
+	return fmt.Sprintf(
+		"Observed direct exclusion evidence for %d privileged principals and possible exclusion evidence for %d privileged principals. This does not assert emergency-access or break-glass correctness.",
+		summary.PrincipalsWithDirectExclusionEvidence,
+		summary.PrincipalsWithPossibleExclusionEvidence,
+	)
+}
+
+func summarizePrivilegedUnknownCoverage(summary PrivilegedCAEvidenceSummary) string {
+	return fmt.Sprintf(
+		"Coverage evidence remains unknown for %d of %d privileged principals from currently collected facts. Group expansion, emergency-access designation, and full effective-policy simulation are not yet implemented.",
+		summary.PrincipalsWithUnknownCoverage,
+		summary.TotalPrivilegedPrincipals,
+	)
+}
+
+func matchedCoveragePrincipals(summary PrivilegedCAEvidenceSummary) []string {
+	out := make([]string, 0)
+	for _, principal := range summary.Principals {
+		if len(principal.ObservedCoveringPolicyNames) == 0 {
+			continue
+		}
+		out = append(out, fmt.Sprintf("%s: %s", principalLabel(principal), strings.Join(principal.ObservedCoveringPolicyNames, ", ")))
+	}
+	sort.Strings(out)
+	return out
+}
+
+func matchedExclusionEvidence(summary PrivilegedCAEvidenceSummary) []string {
+	out := make([]string, 0)
+	for _, principal := range summary.Principals {
+		for _, line := range principal.ExclusionEvidence {
+			out = append(out, fmt.Sprintf("%s: %s", principalLabel(principal), line))
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func matchedUnknownCoveragePrincipals(summary PrivilegedCAEvidenceSummary) []string {
+	out := make([]string, 0)
+	for _, principal := range summary.Principals {
+		if len(principal.ObservedCoveringPolicyIDs) > 0 {
+			continue
+		}
+		out = append(out, principalLabel(principal))
+	}
+	sort.Strings(out)
+	return out
+}
+
+func principalLabel(principal PrivilegedPrincipalCAEvidence) string {
+	if strings.TrimSpace(principal.DisplayName) != "" {
+		return principal.DisplayName
+	}
+	if strings.TrimSpace(principal.UserPrincipalName) != "" {
+		return principal.UserPrincipalName
+	}
+	return principal.PrincipalID
 }

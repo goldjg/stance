@@ -22,7 +22,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 ## v0.1 scope
 
 - Provider support: `microsoft365` only for now.
-- Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection.
+- Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection with cautious privileged-principal CA evidence correlation.
 - Read-only posture assessment.
 - Current check output formats: durable result JSON, Markdown summary, JUnit XML, HTML, SARIF.
 - Current discovery commands: `providers`, `suites`, `checks`.
@@ -216,10 +216,21 @@ Additional implemented checks:
 - `ENTRA-CA-003` privileged-role-targeted Conditional Access policies identified.
 - `ENTRA-CA-004` privileged-role-targeted policies missing MFA/auth strength enforcement.
 - `ENTRA-CA-005` privileged-role-targeted policies with user exclusions observed (informational only; not proof of emergency access coverage).
+- `ENTRA-CA-006` privileged principal Conditional Access coverage evidence observed (informational visibility, not complete coverage proof).
+- `ENTRA-CA-007` privileged principal direct/possible Conditional Access exclusion evidence observed (informational visibility, not emergency-access pass/fail).
+- `ENTRA-CA-008` privileged principal Conditional Access coverage unknown from current facts (informational follow-up signal).
 - `ENTRA-ROLE-001` privileged directory role assignments observed (informational visibility summary).
 - `ENTRA-ROLE-002` privileged role assignments with incomplete principal details observed (informational caution).
 
-Directory role facts are collected to support future privileged-principal Conditional Access and emergency-access analysis. STANCE does not yet implement emergency-access/break-glass pass/fail logic.
+STANCE now correlates privileged role-assignment facts with Conditional Access policy facts to produce cautious privileged-principal evidence. This evidence is intentionally not a full effective-policy proof.
+
+Current limitations:
+
+- Group membership expansion is not implemented.
+- Nested and dynamic group evaluation is not implemented.
+- Emergency-access/break-glass account designation is not implemented.
+- Full effective Conditional Access simulation (What-If style) is not implemented.
+- Report-only policies are not treated as enforcement evidence.
 
 ## Microsoft Graph permissions (current)
 

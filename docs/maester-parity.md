@@ -66,7 +66,7 @@ This matrix uses only these status values:
 | Area | Maester capability | STANCE current | STANCE target | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Provider architecture and core CLI | Stable operator experience across execution surfaces | Provider-neutral core and Microsoft 365 provider routing are in place | Preserve and extend this architecture as parity work scales | implemented | This is the foundation parity layer for all later milestones |
-| Built-in Microsoft 365 security tests | Broad Microsoft 365 test catalog across workloads | Entra CA checks plus cautious Entra role-assignment visibility checks | Expand collectors and rule coverage incrementally | partial | Outcome parity planned through staged collector and suite growth |
+| Built-in Microsoft 365 security tests | Broad Microsoft 365 test catalog across workloads | Entra CA checks, cautious Entra role-assignment visibility checks, and cautious privileged-principal CA coverage/exclusion/unknown evidence checks | Expand collectors and rule coverage incrementally | partial | Outcome parity planned through staged collector and suite growth |
 | Multiple compliance/baseline suites | Multiple baseline/compliance-aligned groupings | Single `entra` suite currently implied by rules | Expand to multiple suites and mapped baselines | partial | P3 focus |
 | Custom tests | User-defined tests and extension model | Not available | Custom rule packs and user-authored checks | not-started | P6 focus |
 | CI/CD execution | Native CI usage patterns | Composite GitHub Action wrapper supports local-build mode plus released-binary modes (`latest` and pinned tags) with checksum verification, and action-native GitHub OIDC assertion acquisition for live collection | Expand automation depth and additional execution surface guidance | partial | Deterministic production posture improves with pinned release usage; further CI ergonomics still remain |
@@ -76,13 +76,14 @@ This matrix uses only these status values:
 | Workload identity federation | Secure non-secret execution paths | WIF-first auth shape plus action-native GitHub OIDC assertion acquisition are in place | Keep WIF-first and strengthen CI packaging | partial | Entra federated credential trust setup remains external and operator-managed |
 | Continuous monitoring / drift detection | Scheduled monitoring and change awareness | Point-in-time execution only | Scheduled runs, history, and drift signals | not-started | P5 focus |
 | Admin-facing remediation guidance | Rich remediation-oriented guidance | Minimal check metadata and summaries, including cautious role-assignment evidence signals | Expand guidance while keeping clean-room wording | partial | Expand gradually with suite growth |
-| Conditional Access What-If style analysis | What-if planning style workflows | Not available | Add analysis features for CA scenario outcomes | not-started | P7 focus |
+| Conditional Access What-If style analysis | What-if planning style workflows | Partial evidence correlation only; no full effective-policy simulation | Add analysis features for CA scenario outcomes | partial | Current privileged-principal CA evidence remains cautious and non-authoritative; full What-If parity is future work |
 | Test install/update lifecycle | Install/update experience for tests/content | Not available | Introduce controlled rule pack lifecycle | deferred | Revisit after core custom-pack capability stabilizes |
 
 ## Remaining priority gaps
 
 - Broader Microsoft 365 checks and suites beyond current coverage.
-- Privileged account and emergency-access analysis remains partial/future; current role checks are intentionally visibility-first.
+- Privileged account and emergency-access analysis remains partial/future; current CA and role checks are intentionally evidence-first and do not implement break-glass pass/fail decisions.
+- Group expansion, nested/dynamic group evaluation, and full Conditional Access What-If style simulation remain future work.
 - Richer baseline/compliance mapping and configuration controls.
 - Drift history and longitudinal comparison workflows.
 - Azure DevOps integration examples/documentation parity with GitHub examples.
