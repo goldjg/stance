@@ -76,6 +76,9 @@ Supported released-binary runner targets:
 | macOS arm64 | `stance_<version>_darwin_arm64.tar.gz` |
 | Windows x64 | `stance_<version>_windows_amd64.zip` |
 
+Windows x64 released-binary support is implemented, but it should be validated
+in a real Windows workflow before relying on it for production automation.
+
 Unsupported targets fail clearly in released-binary mode.
 
 ## Checksum verification
