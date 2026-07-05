@@ -7,6 +7,7 @@ STANCE uses a provider-oriented architecture: core command/report/evaluation con
 The first provider is `microsoft365`. It talks directly to Microsoft APIs, collects tenant facts once, evaluates checks locally, and emits CI-friendly reports without PowerShell runtime/module dependencies.
 
 Repository canonical location: `goldjg/stance`.
+Repository rename note: historical references to `goldjg/stance-365` should be treated as legacy and migrated to `goldjg/stance`.
 
 ## Project thesis
 
@@ -30,6 +31,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 ## Hard constraints
 
 - 100% Go runtime code.
+- Keep STANCE core provider-neutral; provider-specific assumptions belong in `internal/provider/<name>`.
 - No PowerShell runtime dependency.
 - No Microsoft PowerShell modules.
 - No shelling out to `pwsh`, `az`, `mggraph`, ExchangeOnlineManagement, Teams modules, or Graph CLI.

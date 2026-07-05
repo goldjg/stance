@@ -18,6 +18,7 @@ security:
   oidc_wif_first: true
   client_secret_fallback_only: true
 architecture:
+  provider_neutral_core_required: true
   collector_first: true
   collect_once_evaluate_many: true
   declarative_checks_preferred: true

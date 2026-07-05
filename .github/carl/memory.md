@@ -9,7 +9,7 @@
 ## Durable constraints
 - Do not introduce PowerShell runtime dependencies.
 - Do not use Microsoft PowerShell modules.
-- Do not shell out to `pwsh`, `az`, `mggraph`, Graph CLI, or M365 admin modules.
+- Do not shell out to `pwsh`, `az`, `mggraph`, Graph CLI, or Microsoft 365 admin modules.
 - Prefer direct Microsoft Graph/ARM/service REST APIs.
 - Keep dependency footprint small and justified.
 - OIDC/workload identity federation first; client secrets only as documented fallback.
@@ -27,6 +27,7 @@
 ## Implemented decisions
 - STANCE core remains provider-neutral; Microsoft-specific logic must stay under `internal/provider/microsoft365`.
 - Canonical internal provider name is `microsoft365`; aliases like `m365` are deferred.
+- Core packages must not accumulate Microsoft-specific assumptions (Graph endpoints, Entra suite IDs, or Microsoft permission names).
 - `stance auth test` uses environment-driven configuration and fails closed on ambiguous auth material.
 - Workload identity assertion (`STANCE_CLIENT_ASSERTION` or `STANCE_FEDERATED_TOKEN_FILE`) is preferred over secrets in examples.
 - Auth error output must pass through redaction before reaching CLI stderr.

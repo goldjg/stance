@@ -64,7 +64,7 @@ This matrix uses only these status values:
 | Area | Maester capability | STANCE current | STANCE target | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Provider architecture and core CLI | Stable operator experience across execution surfaces | Provider-neutral core and Microsoft 365 provider routing are in place | Preserve and extend this architecture as parity work scales | implemented | This is the foundation parity layer for all later milestones |
-| Built-in Microsoft 365 security tests | Broad M365 test catalog across workloads | Initial Entra CA checks only | Expand collectors and rule coverage incrementally | partial | Outcome parity planned through staged collector and suite growth |
+| Built-in Microsoft 365 security tests | Broad Microsoft 365 test catalog across workloads | Initial Entra CA checks only | Expand collectors and rule coverage incrementally | partial | Outcome parity planned through staged collector and suite growth |
 | Multiple compliance/baseline suites | Multiple baseline/compliance-aligned groupings | Single `entra` suite currently implied by rules | Expand to multiple suites and mapped baselines | partial | P3 focus |
 | Custom tests | User-defined tests and extension model | Not available | Custom rule packs and user-authored checks | not-started | P6 focus |
 | CI/CD execution | Native CI usage patterns | CLI runnable in CI today | Packaged CI workflows and action integration | partial | P4 raises this to implemented |
