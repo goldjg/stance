@@ -12,7 +12,7 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Core architecture is provider-neutral under `internal/core/*`.
 - Microsoft 365 implementation lives under `internal/provider/microsoft365/*`.
 - Current coverage is Entra Conditional Access checks with collect-once/evaluate-locally behavior.
-- Existing check outputs are JSON, Markdown, and JUnit.
+- Existing check outputs are JSON, Markdown, JUnit, HTML, and SARIF.
 
 ## Planned parity milestones
 
@@ -48,7 +48,8 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Full Maester parity in one PR.
 - New Microsoft API collectors in this PR.
 - New posture checks in this PR (except test-only scaffolding if required).
-- Standalone `stance report` conversion command and SARIF output in this PR.
+- Released-binary install mode for GitHub Action execution in this PR.
+- Built-in GitHub OIDC-to-Entra token exchange implementation in this PR.
 
 ## Parity status values
 
@@ -67,10 +68,10 @@ This matrix uses only these status values:
 | Built-in Microsoft 365 security tests | Broad Microsoft 365 test catalog across workloads | Initial Entra CA checks only | Expand collectors and rule coverage incrementally | partial | Outcome parity planned through staged collector and suite growth |
 | Multiple compliance/baseline suites | Multiple baseline/compliance-aligned groupings | Single `entra` suite currently implied by rules | Expand to multiple suites and mapped baselines | partial | P3 focus |
 | Custom tests | User-defined tests and extension model | Not available | Custom rule packs and user-authored checks | not-started | P6 focus |
-| CI/CD execution | Native CI usage patterns | CLI runnable in CI today | Packaged CI workflows and action integration | partial | P4 raises this to implemented |
-| Rich reporting | Human-readable and machine-readable reports | JSON/Markdown/JUnit | Add HTML now, then SARIF and standalone conversion path | partial | HTML delivered in P1; SARIF remains planned |
+| CI/CD execution | Native CI usage patterns | Composite GitHub Action wrapper available (local-build mode) | Expand install modes and deeper automation | partial | Initial wrapper and workflow guidance are implemented; release-binary mode remains future work |
+| Rich reporting | Human-readable and machine-readable reports | JSON/Markdown/JUnit/HTML/SARIF via check/report | Continue improving integrations and operator UX | implemented | Durable result JSON plus offline conversion is in place |
 | Notifications | Alerting and operational notification flows | Not available | Post-run notifications with drift context | not-started | P5 focus |
-| GitHub Actions / Azure DevOps integration | Turnkey pipeline integration | No dedicated integration artifact yet | Publish GitHub Action and integration guidance | not-started | P4 focus |
+| GitHub Actions / Azure DevOps integration | Turnkey pipeline integration | Initial GitHub Action wrapper and examples/docs available | Expand beyond initial GitHub local-build flow and document additional execution surfaces | partial | SARIF upload path is documented; release-binary mode and deeper auth automation remain future work |
 | Workload identity federation | Secure non-secret execution paths | WIF-first auth shape already in place | Keep WIF-first and strengthen CI packaging | partial | Continue hardening with P4 |
 | Continuous monitoring / drift detection | Scheduled monitoring and change awareness | Point-in-time execution only | Scheduled runs, history, and drift signals | not-started | P5 focus |
 | Admin-facing remediation guidance | Rich remediation-oriented guidance | Minimal check metadata and summaries | Expand guidance while keeping clean-room wording | partial | Expand gradually with suite growth |
