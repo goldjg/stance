@@ -1,18 +1,29 @@
 package report
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/goldjg/stance/internal/core/eval"
+	"github.com/goldjg/stance/internal/core/result"
 	"github.com/goldjg/stance/internal/core/rules"
 )
 
-func sampleResult() eval.Result {
-	return eval.Result{
+func sampleDocument() result.Document {
+	return result.Document{
+		SchemaVersion:  result.SchemaVersionV1,
+		GeneratedAtUTC: "2026-07-05T18:16:07Z",
+		Tool: result.ToolMetadata{
+			Name:    "stance",
+			Version: "dev",
+			Commit:  "none",
+			Date:    "unknown",
+		},
+		Provider: "microsoft365",
+		Suite:    "entra",
 		Findings: []eval.Finding{
 			{
 				RuleID:       "TEST-001",
@@ -34,7 +45,7 @@ func sampleResult() eval.Result {
 }
 
 func TestJSONGolden(t *testing.T) {
-	got, err := JSON(sampleResult())
+	got, err := JSON(sampleDocument())
 	if err != nil {
 		t.Fatalf("JSON returned error: %v", err)
 	}
@@ -48,7 +59,7 @@ func TestJSONGolden(t *testing.T) {
 }
 
 func TestMarkdownGolden(t *testing.T) {
-	got := Markdown(sampleResult())
+	got := Markdown(sampleDocument())
 	want, err := os.ReadFile(filepath.Join("testdata", "report.md.golden"))
 	if err != nil {
 		t.Fatalf("read golden: %v", err)
@@ -58,8 +69,22 @@ func TestMarkdownGolden(t *testing.T) {
 	}
 }
 
+func TestSARIFGolden(t *testing.T) {
+	got, err := SARIF(sampleDocument())
+	if err != nil {
+		t.Fatalf("SARIF returned error: %v", err)
+	}
+	want, err := os.ReadFile(filepath.Join("testdata", "report.sarif.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	if strings.TrimSpace(string(got)) != strings.TrimSpace(string(want)) {
+		t.Fatalf("sarif report mismatch\n--- got ---\n%s\n--- want ---\n%s", string(got), string(want))
+	}
+}
+
 func TestJUnitOutput(t *testing.T) {
-	got, err := JUnit(sampleResult())
+	got, err := JUnit(sampleDocument())
 	if err != nil {
 		t.Fatalf("JUnit returned error: %v", err)
 	}
@@ -67,31 +92,25 @@ func TestJUnitOutput(t *testing.T) {
 	if !strings.Contains(s, "<testsuite") || !strings.Contains(s, `failures="1"`) {
 		t.Fatalf("unexpected junit output: %s", s)
 	}
+	if !strings.Contains(s, `timestamp="2026-07-05T18:16:07Z"`) {
+		t.Fatalf("unexpected junit timestamp: %s", s)
+	}
 }
 
-func TestHTMLStableAndEscaped(t *testing.T) {
-	originalNow := nowUTC
-	nowUTC = func() time.Time {
-		return time.Date(2026, time.July, 5, 18, 16, 7, 0, time.UTC)
-	}
-	defer func() {
-		nowUTC = originalNow
-	}()
-
-	result := eval.Result{
-		Findings: []eval.Finding{
-			{
-				RuleID:       "TEST-999",
-				Title:        `Unsafe <script>alert("x")</script> title`,
-				Severity:     rules.SeverityLow,
-				Status:       eval.StatusInfo,
-				Summary:      "Observed informational evidence.",
-				MatchedItems: []string{`Role <admin>`, `User "breakglass"`},
-			},
+func TestHTMLEscaped(t *testing.T) {
+	doc := sampleDocument()
+	doc.Findings = []eval.Finding{
+		{
+			RuleID:       "TEST-999",
+			Title:        `Unsafe <script>alert("x")</script> title`,
+			Severity:     rules.SeverityLow,
+			Status:       eval.StatusInfo,
+			Summary:      "Observed informational evidence.",
+			MatchedItems: []string{`Role <admin>`, `User "breakglass"`},
 		},
 	}
 
-	got, err := HTML(result)
+	got, err := HTML(doc)
 	if err != nil {
 		t.Fatalf("HTML returned error: %v", err)
 	}
@@ -116,5 +135,77 @@ func TestHTMLStableAndEscaped(t *testing.T) {
 	}
 	if !strings.Contains(s, "<td>total</td><td>1</td>") {
 		t.Fatalf("missing total status summary: %s", s)
+	}
+}
+
+func TestSARIFOutput(t *testing.T) {
+	doc := sampleDocument()
+	doc.Findings = []eval.Finding{
+		{
+			RuleID:   "TEST-HIGH",
+			Title:    "High severity fail",
+			Severity: rules.SeverityHigh,
+			Status:   eval.StatusFail,
+			Summary:  "High issue detected",
+		},
+		{
+			RuleID:   "TEST-INFO",
+			Title:    "Informational note",
+			Severity: rules.SeverityLow,
+			Status:   eval.StatusInfo,
+			Summary:  "Evidence observed",
+		},
+		{
+			RuleID:   "TEST-PASS",
+			Title:    "Passing check",
+			Severity: rules.SeverityLow,
+			Status:   eval.StatusPass,
+			Summary:  "No issue",
+		},
+	}
+
+	got, err := SARIF(doc)
+	if err != nil {
+		t.Fatalf("SARIF returned error: %v", err)
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(got, &parsed); err != nil {
+		t.Fatalf("sarif should be valid json: %v", err)
+	}
+	if parsed["version"] != "2.1.0" {
+		t.Fatalf("unexpected sarif version: %#v", parsed["version"])
+	}
+
+	s := string(got)
+	if !strings.Contains(s, `"name": "STANCE"`) {
+		t.Fatalf("missing stance tool name: %s", s)
+	}
+	if !strings.Contains(s, `"ruleId": "TEST-HIGH"`) || !strings.Contains(s, `"ruleId": "TEST-INFO"`) {
+		t.Fatalf("missing expected sarif results: %s", s)
+	}
+	runs, ok := parsed["runs"].([]any)
+	if !ok || len(runs) == 0 {
+		t.Fatalf("expected sarif runs: %#v", parsed["runs"])
+	}
+	run0, ok := runs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected sarif run object: %#v", runs[0])
+	}
+	results, ok := run0["results"].([]any)
+	if !ok {
+		t.Fatalf("expected sarif results array: %#v", run0["results"])
+	}
+	for _, entry := range results {
+		resultEntry, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		if resultEntry["ruleId"] == "TEST-PASS" {
+			t.Fatalf("pass findings should not emit sarif results: %s", s)
+		}
+	}
+	if strings.Contains(s, `"locations"`) {
+		t.Fatalf("sarif should not invent source locations: %s", s)
 	}
 }

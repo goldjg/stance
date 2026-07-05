@@ -10,29 +10,33 @@ import (
 	"time"
 
 	"github.com/goldjg/stance/internal/core/eval"
+	"github.com/goldjg/stance/internal/core/result"
 	"github.com/goldjg/stance/internal/core/rules"
 )
 
-func JSON(result eval.Result) ([]byte, error) {
-	out, err := json.MarshalIndent(result, "", "  ")
+func JSON(doc result.Document) ([]byte, error) {
+	if err := (&doc).Validate(); err != nil {
+		return nil, err
+	}
+	out, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 	return append(out, '\n'), nil
 }
 
-func Markdown(result eval.Result) []byte {
+func Markdown(doc result.Document) []byte {
 	var b bytes.Buffer
 	b.WriteString("# STANCE check summary\n\n")
 	b.WriteString("| Rule ID | Severity | Status | Summary |\n")
 	b.WriteString("| --- | --- | --- | --- |\n")
-	for _, f := range result.Findings {
+	for _, f := range doc.Findings {
 		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", f.RuleID, f.Severity, f.Status, f.Summary)
 	}
 	return b.Bytes()
 }
 
-func JUnit(result eval.Result) ([]byte, error) {
+func JUnit(doc result.Document) ([]byte, error) {
 	type failure struct {
 		Message string `xml:"message,attr"`
 		Text    string `xml:",chardata"`
@@ -51,9 +55,9 @@ func JUnit(result eval.Result) ([]byte, error) {
 		TestCases []testcase `xml:"testcase"`
 	}
 
-	cases := make([]testcase, 0, len(result.Findings))
+	cases := make([]testcase, 0, len(doc.Findings))
 	failures := 0
-	for _, finding := range result.Findings {
+	for _, finding := range doc.Findings {
 		tc := testcase{
 			Name:      finding.RuleID,
 			Classname: "STANCE",
@@ -68,11 +72,15 @@ func JUnit(result eval.Result) ([]byte, error) {
 		cases = append(cases, tc)
 	}
 
+	ts := strings.TrimSpace(doc.GeneratedAtUTC)
+	if ts == "" {
+		ts = time.Now().UTC().Format(time.RFC3339)
+	}
 	suite := testsuite{
 		Name:      "STANCE Checks",
 		Tests:     len(cases),
 		Failures:  failures,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Timestamp: ts,
 		TestCases: cases,
 	}
 	out, err := xml.MarshalIndent(suite, "", "  ")
@@ -80,10 +88,6 @@ func JUnit(result eval.Result) ([]byte, error) {
 		return nil, err
 	}
 	return append([]byte(xml.Header), append(out, '\n')...), nil
-}
-
-var nowUTC = func() time.Time {
-	return time.Now().UTC()
 }
 
 type Summary struct {
@@ -94,12 +98,12 @@ type Summary struct {
 	CountsBySeverity map[rules.Severity]int `json:"counts_by_severity"`
 }
 
-func Summarize(result eval.Result) Summary {
+func Summarize(doc result.Document) Summary {
 	summary := Summary{
-		Total:            len(result.Findings),
+		Total:            len(doc.Findings),
 		CountsBySeverity: make(map[rules.Severity]int),
 	}
-	for _, finding := range result.Findings {
+	for _, finding := range doc.Findings {
 		switch finding.Status {
 		case eval.StatusPass:
 			summary.PassCount++
@@ -113,7 +117,7 @@ func Summarize(result eval.Result) Summary {
 	return summary
 }
 
-func HTML(result eval.Result) ([]byte, error) {
+func HTML(doc result.Document) ([]byte, error) {
 	type statusCount struct {
 		Label string
 		Count int
@@ -139,9 +143,9 @@ func HTML(result eval.Result) ([]byte, error) {
 		Findings       []findingView
 	}
 
-	summary := Summarize(result)
-	findings := make([]findingView, 0, len(result.Findings))
-	for _, finding := range result.Findings {
+	summary := Summarize(doc)
+	findings := make([]findingView, 0, len(doc.Findings))
+	for _, finding := range doc.Findings {
 		note := ""
 		if finding.Status == eval.StatusInfo {
 			note = "Informational finding: this is evidence-only context and does not by itself prove a misconfiguration."
@@ -166,9 +170,13 @@ func HTML(result eval.Result) ([]byte, error) {
 		})
 	}
 
+	generatedAt := strings.TrimSpace(doc.GeneratedAtUTC)
+	if generatedAt == "" {
+		generatedAt = time.Now().UTC().Format(time.RFC3339)
+	}
 	data := templateData{
 		Title:          "STANCE check report",
-		GeneratedAtUTC: nowUTC().Format(time.RFC3339),
+		GeneratedAtUTC: generatedAt,
 		StatusCounts: []statusCount{
 			{Label: string(eval.StatusPass), Count: summary.PassCount},
 			{Label: string(eval.StatusFail), Count: summary.FailCount},

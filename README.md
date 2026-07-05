@@ -24,9 +24,9 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 - Provider support: `microsoft365` only for now.
 - Microsoft 365 scope: Entra ID and Conditional Access only.
 - Read-only posture assessment.
-- Current check output formats: JSON, Markdown summary, JUnit XML.
+- Current check output formats: durable result JSON, Markdown summary, JUnit XML, HTML, SARIF.
 - Current discovery commands: `providers`, `suites`, `checks`.
-- Planned output: SARIF and standalone `stance report`.
+- Standalone `stance report` converts durable result JSON into report formats offline.
 
 ## Hard constraints
 
@@ -62,7 +62,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 - `stance checks`
 - `stance report`
 
-`stance report` is planned and not yet implemented as a standalone conversion command.
+`stance report` is implemented as a standalone offline conversion command.
 
 Provider-aware commands currently default to `--provider microsoft365`:
 
@@ -126,10 +126,30 @@ Supported formats right now:
 - `md` / `markdown`
 - `junit`
 - `html`
+- `sarif`
+
+Durable result document generation:
+
+- `stance check --facts facts.json --format json --out results.json`
 
 HTML report example:
 
 - `stance check --facts facts.json --format html --out report.html`
+
+SARIF report example:
+
+- `stance check --facts facts.json --format sarif --out stance.sarif`
+
+Offline conversion examples:
+
+- `stance report --results results.json --format html --out report.html`
+- `stance report --results results.json --format sarif --out stance.sarif`
+
+Suggested CI flow:
+
+1. collect facts (`stance collect --out facts.json`)
+2. evaluate checks to durable results (`stance check --facts facts.json --format json --out results.json`)
+3. convert results to presentation and integration outputs (`stance report --results results.json --format html --out report.html` and `stance report --results results.json --format sarif --out stance.sarif`)
 
 Additional implemented checks:
 

@@ -5,7 +5,7 @@ Initial bootstrap implementation covering PR1-PR7 foundation work in one deliver
 
 ## Included
 - Go module initialization.
-- CLI surface with implemented `version`, `init`, `auth test`, `collect`, `check`, `permissions`, `explain`.
+- CLI surface with implemented `version`, `init`, `auth test`, `collect`, `check`, `permissions`, `explain`, `report`.
 - Provider-oriented architecture split:
   - provider-neutral core packages under `internal/core/*`
   - Microsoft 365 provider packages under `internal/provider/microsoft365/*`
@@ -15,12 +15,16 @@ Initial bootstrap implementation covering PR1-PR7 foundation work in one deliver
 - Auth provider skeleton (WIF-first with fallback secret flow) and redaction behavior.
 - Graph and HTTP client foundations (retry, retry-after, user-agent, pagination).
 - Collector-first fact bundle and initial Conditional Access collection.
-- Initial evaluator and JSON/Markdown/JUnit report rendering via `check --format`.
+- Stable result document model (`stance.result.v1`) for durable check output.
+- Offline report conversion command: `stance report --results ... --format ...`.
+- SARIF 2.1.0 output via both `check --format sarif` and `report --format sarif`.
+- Initial evaluator and JSON/Markdown/JUnit/HTML/SARIF report rendering.
 
 ## Excluded
 - Remediation/write actions.
-- Standalone `stance report` conversion command.
-- SARIF output (planned).
+- New Microsoft API collectors.
+- New posture checks.
+- New providers.
 
 ## Guardrails
 - Keep changes minimal and reviewable.
