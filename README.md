@@ -114,25 +114,28 @@ Runtime constraints remain unchanged: STANCE runtime is 100% Go, provider-core
 boundaries remain provider-neutral, and STANCE does not add PowerShell runtime
 or Microsoft module dependencies.
 
-## GitHub Action (initial)
+## GitHub Action
 
-STANCE now includes an initial composite GitHub Action wrapper at repository
-root (`action.yml`) that builds STANCE locally from checked-out source.
+STANCE includes a composite GitHub Action wrapper at repository root
+(`action.yml`) that builds STANCE locally from checked-out source.
 
 - Documentation: [docs/github-action.md](docs/github-action.md)
 - Example workflow files:
   - `docs/examples/github-actions/stance-microsoft365.yml`
   - `docs/examples/github-actions/stance-facts-only.yml`
-- Current mode: local build only (`stance-version: local`)
-- Planned: released-binary action install mode
+- Current supported execution mode: local build only (`stance-version: local`)
+- Released-binary action install mode is planned
 
-Minimal invocation example:
+Minimal `github-oidc` invocation example:
 
 ```yaml
 - name: Run STANCE
   id: stance
   uses: ./
   with:
+    auth-mode: github-oidc
+    tenant-id: ${{ vars.STANCE_TENANT_ID }}
+    client-id: ${{ vars.STANCE_CLIENT_ID }}
     provider: microsoft365
     suite: entra
     formats: json,html,sarif

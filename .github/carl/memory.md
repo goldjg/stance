@@ -54,7 +54,10 @@
 - This release packaging PR adds no new Microsoft collectors, no new posture checks, and no new providers.
 - Initial STANCE GitHub Action wrapper exists as a repository-local composite action (`action.yml`) that builds STANCE from checked-out source.
 - The GitHub Action supports facts-only mode via `facts-path` and can run evaluation/report generation without Microsoft authentication.
-- Live collection via GitHub Action requires existing STANCE environment-driven Microsoft auth variables.
-- GitHub OIDC-to-Entra token exchange is not faked in the action; workflows/docs must include an explicit exchange step when using WIF.
+- The GitHub Action supports `auth-mode: env` for explicit caller-provided Microsoft auth variables.
+- The GitHub Action supports `auth-mode: github-oidc` and can acquire a GitHub OIDC token for live collection.
+- In `github-oidc` mode, the action passes the GitHub OIDC assertion to STANCE via `STANCE_CLIENT_ASSERTION`.
+- Entra federated identity credential setup remains external to STANCE and must not be faked.
 - SARIF upload is supported by generating `stance.sarif` and uploading through `github/codeql-action/upload-sarif`.
-- This GitHub Action packaging/documentation PR adds no new Microsoft collectors, no new posture checks, and no new providers.
+- Facts-only mode remains auth-free.
+- This GitHub Action OIDC ergonomics PR adds no new Microsoft collectors, no new posture checks, and no new providers.
