@@ -15,19 +15,19 @@ func sampleResult() eval.Result {
 	return eval.Result{
 		Findings: []eval.Finding{
 			{
-				RuleID:       "ENTRA-CA-001",
-				Title:        "Disabled Conditional Access policies are identified",
+				RuleID:       "TEST-001",
+				Title:        "First generic posture finding",
 				Severity:     rules.SeverityMedium,
 				Status:       eval.StatusFail,
-				Summary:      "Detected disabled policies.",
-				MatchedItems: []string{"Disabled policy"},
+				Summary:      "Detected failing condition.",
+				MatchedItems: []string{"Matched item A"},
 			},
 			{
-				RuleID:   "ENTRA-CA-002",
-				Title:    "Report-only Conditional Access policies are identified",
+				RuleID:   "TEST-002",
+				Title:    "Second generic posture finding",
 				Severity: rules.SeverityLow,
 				Status:   eval.StatusPass,
-				Summary:  "No report-only policies detected.",
+				Summary:  "No failing conditions detected.",
 			},
 		},
 	}
@@ -81,7 +81,7 @@ func TestHTMLStableAndEscaped(t *testing.T) {
 	result := eval.Result{
 		Findings: []eval.Finding{
 			{
-				RuleID:       "ENTRA-CA-999",
+				RuleID:       "TEST-999",
 				Title:        `Unsafe <script>alert("x")</script> title`,
 				Severity:     rules.SeverityLow,
 				Status:       eval.StatusInfo,
