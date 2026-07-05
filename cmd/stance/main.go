@@ -27,7 +27,7 @@ import (
 )
 
 const defaultConfigPath = "stance.yaml"
-const defaultProvider = "microsoft365"
+const defaultProvider = microsoft365catalog.ProviderName
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -482,7 +482,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Available commands:")
 	fmt.Fprintln(w, "  version      Print build and version information")
 	fmt.Fprintln(w, "  init         Create a local STANCE config scaffold")
-	fmt.Fprintln(w, "  auth test    Verify authentication against Graph")
+	fmt.Fprintln(w, "  auth test    Verify microsoft365 authentication against Graph")
 	fmt.Fprintln(w, "  collect      Collect tenant facts to JSON (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  check        Evaluate checks from collected facts (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  explain      Explain implemented checks (--provider defaults to microsoft365)")

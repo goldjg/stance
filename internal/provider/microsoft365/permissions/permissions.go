@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corerules "github.com/goldjg/stance/internal/core/rules"
+	microsoft365catalog "github.com/goldjg/stance/internal/provider/microsoft365/catalog"
 	providerrules "github.com/goldjg/stance/internal/provider/microsoft365/rules"
 )
 
@@ -17,7 +18,7 @@ var suitePermissions = map[string][]string{
 type Resolver struct{}
 
 func (Resolver) Name() string {
-	return "microsoft365"
+	return microsoft365catalog.ProviderName
 }
 
 func (Resolver) ForSuite(suite string) ([]string, error) {
