@@ -46,6 +46,17 @@ jobs:
             exit 1
           fi
 
+      - name: Check required Homebrew tap token
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::error::Required Homebrew tap token HOMEBREW_TAP_GITHUB_TOKEN is not configured."
+            echo "Homebrew publishing is live/configured and must not be skipped."
+            echo "See DISTRIBUTION.md for setup instructions."
+            exit 1
+          fi
+
       - name: Import Developer ID Application certificate
         env:
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
