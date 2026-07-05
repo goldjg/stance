@@ -8,12 +8,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	corecatalog "github.com/goldjg/stance/internal/core/catalog"
 	corepermissions "github.com/goldjg/stance/internal/core/permissions"
 	"github.com/goldjg/stance/internal/core/report"
 	"github.com/goldjg/stance/internal/httpclient"
 	microsoft365auth "github.com/goldjg/stance/internal/provider/microsoft365/auth"
+	microsoft365catalog "github.com/goldjg/stance/internal/provider/microsoft365/catalog"
 	microsoft365collect "github.com/goldjg/stance/internal/provider/microsoft365/collect"
 	microsoft365eval "github.com/goldjg/stance/internal/provider/microsoft365/eval"
 	microsoft365facts "github.com/goldjg/stance/internal/provider/microsoft365/facts"
@@ -64,6 +67,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runPermissions(args[1:], stdout, stderr)
 	case "explain":
 		return runExplain(args[1:], stdout, stderr)
+	case "providers":
+		return runProviders(args[1:], stdout, stderr)
+	case "suites":
+		return runSuites(args[1:], stdout, stderr)
+	case "checks":
+		return runChecks(args[1:], stdout, stderr)
 	case "report":
 		fmt.Fprintf(stderr, "%q is planned but not implemented yet\n", strings.Join(args, " "))
 		return 1
@@ -218,6 +227,8 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		payload = report.Markdown(result)
 	case "junit":
 		payload, err = report.JUnit(result)
+	case "html":
+		payload, err = report.HTML(result)
 	default:
 		fmt.Fprintf(stderr, "unsupported format: %s\n", format)
 		return 1
@@ -240,6 +251,110 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	fmt.Fprintf(stdout, "wrote %s report to %s\n", format, outPath)
+	return 0
+}
+
+func runProviders(_ []string, stdout, _ io.Writer) int {
+	providers := []corecatalog.ProviderInfo{
+		microsoft365catalog.Provider(),
+	}
+	sort.Slice(providers, func(i, j int) bool {
+		return providers[i].Name < providers[j].Name
+	})
+	for _, provider := range providers {
+		fmt.Fprintf(stdout, "%s\t%s\t%s\t%d suites\n", provider.Name, provider.DisplayName, provider.Description, len(provider.Suites))
+	}
+	return 0
+}
+
+func runSuites(args []string, stdout, stderr io.Writer) int {
+	providerName, _, err := parseProviderFlag(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
+	}
+
+	for _, suite := range microsoft365catalog.Suites() {
+		fmt.Fprintf(stdout, "%s\t%s\t%s\tchecks=%d\n", suite.ID, suite.DisplayName, suite.Status, suite.CheckCount)
+	}
+	return 0
+}
+
+func runChecks(args []string, stdout, stderr io.Writer) int {
+	providerName, filtered, err := parseProviderFlag(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
+	}
+
+	suite := ""
+	format := "text"
+	for i := 0; i < len(filtered); i++ {
+		if i+1 >= len(filtered) {
+			break
+		}
+		switch filtered[i] {
+		case "--suite":
+			suite = filtered[i+1]
+			i++
+		case "--format":
+			format = filtered[i+1]
+			i++
+		}
+	}
+
+	if suite != "" {
+		known := false
+		for _, suiteInfo := range microsoft365catalog.Suites() {
+			if suiteInfo.ID == suite {
+				known = true
+				break
+			}
+		}
+		if !known {
+			fmt.Fprintf(stderr, "unknown suite: %s\n", suite)
+			return 1
+		}
+	}
+
+	checks := microsoft365catalog.Checks()
+	if suite != "" {
+		out := make([]corecatalog.CheckInfo, 0, len(checks))
+		for _, check := range checks {
+			if check.Suite == suite {
+				out = append(out, check)
+			}
+		}
+		checks = out
+	}
+
+	switch format {
+	case "text":
+		for _, check := range checks {
+			fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\n", check.ID, check.Severity, check.Suite, check.Title)
+		}
+	case "json":
+		payload, marshalErr := json.MarshalIndent(checks, "", "  ")
+		if marshalErr != nil {
+			fmt.Fprintf(stderr, "checks failed: %v\n", marshalErr)
+			return 1
+		}
+		_, _ = stdout.Write(append(payload, '\n'))
+	default:
+		fmt.Fprintf(stderr, "unsupported format: %s\n", format)
+		return 1
+	}
+
 	return 0
 }
 
@@ -372,6 +487,9 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  check        Evaluate checks from collected facts (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  explain      Explain implemented checks (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  permissions  Calculate required permissions (--provider defaults to microsoft365)")
+	fmt.Fprintln(w, "  providers    List implemented providers")
+	fmt.Fprintln(w, "  suites       List suites for a provider (--provider defaults to microsoft365)")
+	fmt.Fprintln(w, "  checks       List checks for a provider (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  report       (planned) Render reports from results")
 }
 

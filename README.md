@@ -14,6 +14,9 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 
 - Maester is a functional reference for Microsoft 365 problem space and coverage ideas.
 - STANCE is clean-room implementation and must not copy Maester source code, rule text, implementation structure, or report text.
+- Parity means equivalent operator outcomes, not copied implementation.
+
+Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 
 ## v0.1 scope
 
@@ -21,7 +24,8 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 - Microsoft 365 scope: Entra ID and Conditional Access only.
 - Read-only posture assessment.
 - Current check output formats: JSON, Markdown summary, JUnit XML.
-- Planned output: SARIF.
+- Current discovery commands: `providers`, `suites`, `checks`.
+- Planned output: SARIF and standalone `stance report`.
 
 ## Hard constraints
 
@@ -51,6 +55,9 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 - `stance check`
 - `stance explain`
 - `stance permissions`
+- `stance providers`
+- `stance suites`
+- `stance checks`
 - `stance report`
 
 `stance report` is planned and not yet implemented as a standalone conversion command.
@@ -61,6 +68,16 @@ Provider-aware commands currently default to `--provider microsoft365`:
 - `stance check --provider microsoft365`
 - `stance permissions --provider microsoft365 --suite entra`
 - `stance explain --provider microsoft365 --check ENTRA-CA-001`
+- `stance suites --provider microsoft365`
+- `stance checks --provider microsoft365 --suite entra`
+
+Provider discovery command:
+
+- `stance providers`
+
+Check discovery JSON output:
+
+- `stance checks --provider microsoft365 --suite entra --format json`
 
 ## Status
 
@@ -106,6 +123,11 @@ Supported formats right now:
 - `json`
 - `md` / `markdown`
 - `junit`
+- `html`
+
+HTML report example:
+
+- `stance check --facts facts.json --format html --out report.html`
 
 Additional implemented checks:
 

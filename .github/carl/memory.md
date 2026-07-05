@@ -34,3 +34,8 @@
 - `stance explain --check <id>` returns machine-readable metadata for implemented checks.
 - CA authentication strength evidence is mapped from `grantControls.authenticationStrength` (not `sessionControls`).
 - Excluded users in CA policies are treated as informational-only evidence and do not prove emergency-access coverage.
+- STANCE has a documented Maester parity roadmap in `docs/maester-parity.md`.
+- Parity is defined as equivalent user outcomes, not copied implementation lineage.
+- Provider/suite/check catalog metadata is the discovery foundation for future parity milestones.
+- HTML output for `stance check --format html` is the first reporting parity slice.
+- This PR intentionally adds no new Microsoft API collectors and no new posture checks.
