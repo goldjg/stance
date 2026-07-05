@@ -1,0 +1,154 @@
+# Release workflow — builds and publishes STANCE CLI archives and native Linux
+# packages on semantic release tags.
+#
+# Notarisation is intentionally not implemented in this PR.
+# Current flow signs darwin binaries but does not notarise them.
+# Future path: move to App Store Connect API key credentials and configure
+# notarize.macos in .goreleaser.yaml.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: GoReleaser
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check required Apple signing secrets
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERT_PASS: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$CERT_P12" ] && missing="$missing MACOS_CERTIFICATE_P12_BASE64"
+          [ -z "$CERT_PASS" ] && missing="$missing MACOS_CERTIFICATE_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Required Apple signing secrets are not configured:$missing"
+            echo "See DISTRIBUTION.md for setup instructions."
+            exit 1
+          fi
+
+      - name: Import Developer ID Application certificate
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$RUNNER_TEMP/cert.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          SIGNING_IDENTITY=$(
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep "Developer ID Application" \
+            | sed -n '1s/.*"\([^"]*\)".*/\1/p'
+          )
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "::error::No Developer ID Application certificate found in keychain."
+            exit 1
+          fi
+          echo "SIGNING_IDENTITY=$SIGNING_IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
+        with:
+          version: v2.16.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          SIGNING_IDENTITY: ${{ env.SIGNING_IDENTITY }}
+
+      - name: Delete temporary keychain
+        if: always()
+        run: |
+          if [ -z "${KEYCHAIN_PATH:-}" ]; then
+            echo "KEYCHAIN_PATH not set; keychain was never created."
+          elif [[ "$KEYCHAIN_PATH" != "$RUNNER_TEMP"/* ]]; then
+            echo "::warning::KEYCHAIN_PATH is outside RUNNER_TEMP; skipping deletion for safety."
+          elif security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null; then
+            echo "Temporary keychain deleted."
+          else
+            echo "Keychain deletion skipped (not created or already absent)."
+          fi
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+  winget:
+    name: WinGet publish
+    runs-on: windows-latest
+    needs:
+      - release
+    env:
+      WINGETCREATE_TOKEN: ${{ secrets.WINGETCREATE_TOKEN }}
+    steps:
+      - name: Skip when WinGet token is not configured
+        if: ${{ env.WINGETCREATE_TOKEN == '' }}
+        shell: pwsh
+        run: Write-Host "WINGETCREATE_TOKEN is not configured; skipping WinGet publish."
+
+      - name: Submit WinGet manifest PR
+        if: ${{ env.WINGETCREATE_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ($env:GITHUB_REF_NAME -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$') {
+            throw "Invalid tag format '$env:GITHUB_REF_NAME'. Expected semantic version tag starting with 'v'."
+          }
+
+          Write-Host "Installing wingetcreate..." -ForegroundColor Green
+          Import-Module Appx -UseWindowsPowerShell -ErrorAction Stop
+
+          $bundlePath = Join-Path -Path $env:TEMP -ChildPath "wingetcreate.msixbundle"
+          Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest/msixbundle" -OutFile $bundlePath -ErrorAction Stop
+
+          $signature = Get-AuthenticodeSignature -FilePath $bundlePath
+          if ($signature.Status -ne 'Valid') {
+            throw "wingetcreate bundle signature validation failed: $($signature.Status)"
+          }
+
+          Add-AppxPackage -Path $bundlePath -ErrorAction Stop
+
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          $url = "https://github.com/goldjg/stance/releases/download/$env:GITHUB_REF_NAME/stance_${version}_windows_amd64.zip|x64"
+
+          Write-Host "Submitting WinGet PR for goldjg.STANCE $version..." -ForegroundColor Green
+          wingetcreate update goldjg.STANCE --version $version --token $env:WINGETCREATE_TOKEN --submit --urls $url

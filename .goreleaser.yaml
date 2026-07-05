@@ -1,0 +1,99 @@
+# GoReleaser configuration for the STANCE CLI.
+# https://goreleaser.com/customization/
+#
+# Requires GoReleaser v2.
+# Run locally:
+#   goreleaser check
+#   goreleaser release --snapshot --skip=publish
+
+version: 2
+
+project_name: stance
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: stance
+    main: ./cmd/stance
+    binary: stance
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/goldjg/stance/internal/version.Version={{.Version}}
+      - -X github.com/goldjg/stance/internal/version.Commit={{.FullCommit}}
+      - -X github.com/goldjg/stance/internal/version.Date={{.Date}}
+    hooks:
+      post:
+        - cmd: bash .github/scripts/codesign-darwin.sh
+          env:
+            - ARTIFACT_PATH={{ .Path }}
+            - ARTIFACT_TARGET={{ .Target }}
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+release:
+  github:
+    owner: goldjg
+    name: stance
+  draft: false
+  prerelease: auto
+  make_latest: true
+
+nfpms:
+  - id: packages
+    package_name: stance
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    ids:
+      - stance
+    vendor: goldjg
+    homepage: https://github.com/goldjg/stance
+    maintainer: Graham Gold <noreply@github.com>
+    description: "STANCE — Secure Tenant And Configuration Evaluator. Go-native provider-oriented cloud security posture evaluation."
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/stance/LICENSE
+        type: doc
+
+# Homebrew publishing uses the goldjg/homebrew-stance tap repository.
+# Ensure the repository exists and HOMEBREW_TAP_GITHUB_TOKEN has write access
+# before pushing release tags, otherwise release publishing will fail.
+homebrew_casks:
+  - name: stance
+    repository:
+      owner: goldjg
+      name: homebrew-stance
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/goldjg/stance
+    description: "STANCE — Secure Tenant And Configuration Evaluator"
+    binaries:
+      - stance
+
+# WinGet submission is handled by .github/workflows/release.yml via wingetcreate.

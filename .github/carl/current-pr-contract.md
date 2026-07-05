@@ -1,32 +1,37 @@
 # Current PR contract
 
 ## PR focus
-Initial bootstrap implementation covering PR1-PR7 foundation work in one delivery slice for review tightening.
+Add first-class STANCE release and distribution packaging.
 
 ## Included
-- Go module initialization.
-- CLI surface with implemented `version`, `init`, `auth test`, `collect`, `check`, `permissions`, `explain`, `report`.
-- Provider-oriented architecture split:
-  - provider-neutral core packages under `internal/core/*`
-  - Microsoft 365 provider packages under `internal/provider/microsoft365/*`
-- cARL governance bootstrap in `.github/carl/`.
-- README project thesis, hard constraints, non-goals.
-- GitHub Actions CI with gofmt/test/vet.
-- Auth provider skeleton (WIF-first with fallback secret flow) and redaction behavior.
-- Graph and HTTP client foundations (retry, retry-after, user-agent, pagination).
-- Collector-first fact bundle and initial Conditional Access collection.
-- Stable result document model (`stance.result.v1`) for durable check output.
-- Offline report conversion command: `stance report --results ... --format ...`.
-- SARIF 2.1.0 output via both `check --format sarif` and `report --format sarif`.
-- Initial evaluator and JSON/Markdown/JUnit/HTML/SARIF report rendering.
+- Add `.goreleaser.yaml` with STANCE-specific release configuration.
+- Add `.github/workflows/release.yml` tag-triggered release workflow.
+- Add `.github/scripts/codesign-darwin.sh` darwin codesign helper.
+- Configure native Linux package generation (`deb`, `rpm`, `apk`) via nFPM.
+- Configure Homebrew cask publishing target for `goldjg/homebrew-stance`.
+- Add optional token-gated WinGet submission job in release workflow.
+- Add `DISTRIBUTION.md` release/distribution documentation.
+- Update README release/install guidance and link distribution docs.
+- Update `.github/carl/memory.md` with durable release packaging truth.
 
 ## Excluded
-- Remediation/write actions.
 - New Microsoft API collectors.
 - New posture checks.
 - New providers.
+- GitHub Action wrapper for running STANCE posture commands.
+- macOS notarisation implementation.
+- Live release publishing verification against external channels.
 
 ## Guardrails
-- Keep changes minimal and reviewable.
-- Preserve clean-room constraints.
-- Keep dependencies minimal.
+- Keep STANCE runtime 100% Go.
+- No PowerShell runtime/module dependency in STANCE CLI runtime.
+- No shell-out from STANCE CLI runtime to `pwsh`, `az`, `mggraph`, Graph CLI, or Microsoft admin modules.
+- Preserve provider-neutral core architecture and canonical `microsoft365` provider usage.
+- Keep dependency footprint minimal and justified.
+- Keep clean-room Maester boundaries.
+
+## Validation requirements
+- `gofmt -l .` clean.
+- `go test ./...`.
+- `go vet ./...`.
+- `goreleaser check` when available in environment.
