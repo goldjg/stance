@@ -64,14 +64,15 @@
 - Auth modes `env` and `github-oidc` remain supported after install-mode expansion.
 - Microsoft 365 collector scope now includes Entra directory role definitions and role assignments via direct Graph API.
 - Privileged principals are derived from Entra role assignments as facts for future coverage analysis.
+- STANCE now collects direct group memberships for privileged principals via direct Graph API.
 - ENTRA role visibility checks are informational/cautious and do not claim emergency-access or break-glass pass/fail outcomes.
 - STANCE now derives cautious privileged-principal Conditional Access coverage/exclusion/unknown evidence from existing CA policy and role-assignment facts.
+- Privileged-principal CA evidence can now use direct principal group membership to correlate group-targeted include/exclude policy evidence.
 - Privileged-principal CA coverage evidence is visibility-only and not proof of complete effective coverage.
 - Privileged-principal CA exclusion evidence distinguishes direct principal-level matches from possible-only evidence when principal-level proof is unavailable.
-- Group expansion, dynamic groups, nested groups, emergency-access designation, and full Conditional Access What-If simulation remain future work.
-- This privileged-principal CA evidence slice intentionally adds no new collectors or Graph endpoints.
+- Nested groups, transitive group membership expansion, dynamic group rules, emergency-access designation, and full Conditional Access What-If simulation remain future work.
 - This slice adds no new providers and no non-Entra workload expansion.
-- `RoleManagement.Read.Directory` is required for directory role assignment collection; `Directory.Read.All` may be required for principal detail resolution.
+- `RoleManagement.Read.Directory` is required for directory role assignment collection; `Directory.Read.All` is required or may be required for principal and direct group detail resolution.
 - This collector expansion adds no PowerShell/runtime/module dependencies, no shell-outs, and no Microsoft SDK dependency.
 - STANCE durable result JSON can carry optional provider-generated structured finding details through provider-neutral core finding fields.
 - Privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) now include per-principal machine-readable evidence details in JSON results.

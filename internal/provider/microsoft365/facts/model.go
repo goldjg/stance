@@ -6,13 +6,14 @@ import (
 )
 
 type Bundle struct {
-	CollectedAtUTC           string                    `json:"collected_at_utc"`
-	Service                  string                    `json:"service"`
-	Organization             []OrganizationFact        `json:"organization"`
-	CAPolicies               []CAPolicyFact            `json:"conditional_access_policies"`
-	DirectoryRoleDefinitions []DirectoryRoleDefinition `json:"directory_role_definitions"`
-	DirectoryRoleAssignments []DirectoryRoleAssignment `json:"directory_role_assignments"`
-	PrivilegedPrincipals     []PrivilegedPrincipal     `json:"privileged_principals"`
+	CollectedAtUTC            string                     `json:"collected_at_utc"`
+	Service                   string                     `json:"service"`
+	Organization              []OrganizationFact         `json:"organization"`
+	CAPolicies                []CAPolicyFact             `json:"conditional_access_policies"`
+	DirectoryRoleDefinitions  []DirectoryRoleDefinition  `json:"directory_role_definitions"`
+	DirectoryRoleAssignments  []DirectoryRoleAssignment  `json:"directory_role_assignments"`
+	PrivilegedPrincipals      []PrivilegedPrincipal      `json:"privileged_principals"`
+	PrincipalGroupMemberships []PrincipalGroupMembership `json:"principal_group_memberships"`
 }
 
 func NewBundle() Bundle {
@@ -50,6 +51,9 @@ func (b *Bundle) ensureDefaults() {
 	}
 	if b.PrivilegedPrincipals == nil {
 		b.PrivilegedPrincipals = make([]PrivilegedPrincipal, 0)
+	}
+	if b.PrincipalGroupMemberships == nil {
+		b.PrincipalGroupMemberships = make([]PrincipalGroupMembership, 0)
 	}
 }
 
@@ -100,4 +104,13 @@ type PrivilegedPrincipal struct {
 	UserPrincipalName string   `json:"user_principal_name,omitempty"`
 	RoleDefinitionIDs []string `json:"role_definition_ids"`
 	RoleDisplayNames  []string `json:"role_display_names"`
+}
+
+type PrincipalGroupMembership struct {
+	PrincipalID      string `json:"principal_id"`
+	PrincipalType    string `json:"principal_type,omitempty"`
+	GroupID          string `json:"group_id"`
+	GroupDisplayName string `json:"group_display_name,omitempty"`
+	GroupType        string `json:"group_type,omitempty"`
+	Source           string `json:"source"`
 }

@@ -14,6 +14,8 @@ type PrivilegedPrincipalCAEvidence struct {
 	DisplayName                  string   `json:"display_name,omitempty"`
 	UserPrincipalName            string   `json:"user_principal_name,omitempty"`
 	RoleDisplayNames             []string `json:"role_display_names"`
+	DirectGroupIDs               []string `json:"direct_group_ids"`
+	DirectGroupDisplayNames      []string `json:"direct_group_display_names"`
 	ObservedCoveringPolicyIDs    []string `json:"observed_covering_policy_ids"`
 	ObservedCoveringPolicyNames  []string `json:"observed_covering_policy_names"`
 	ObservedExcludingPolicyIDs   []string `json:"observed_excluding_policy_ids"`
@@ -41,6 +43,14 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 		}
 		byPrincipalID[id] = append(byPrincipalID[id], assignment)
 	}
+	groupsByPrincipalID := make(map[string][]facts.PrincipalGroupMembership)
+	for _, membership := range bundle.PrincipalGroupMemberships {
+		id := strings.TrimSpace(membership.PrincipalID)
+		if id == "" {
+			continue
+		}
+		groupsByPrincipalID[id] = append(groupsByPrincipalID[id], membership)
+	}
 
 	principals := append([]facts.PrivilegedPrincipal(nil), bundle.PrivilegedPrincipals...)
 	sort.Slice(principals, func(i, j int) bool {
@@ -56,14 +66,19 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 		assignments := byPrincipalID[strings.TrimSpace(principal.PrincipalID)]
 		roleIDs := mergeRoleIDs(principal.RoleDefinitionIDs, assignments)
 		roleNames := mergeRoleNames(principal.RoleDisplayNames, assignments)
+		principalGroups := groupsByPrincipalID[strings.TrimSpace(principal.PrincipalID)]
+		directGroupIDs := mergeDirectGroupIDs(principalGroups)
+		directGroupNames := mergeDirectGroupNames(principalGroups)
 
 		evidence := PrivilegedPrincipalCAEvidence{
-			PrincipalID:       principal.PrincipalID,
-			PrincipalType:     principal.PrincipalType,
-			DisplayName:       principal.DisplayName,
-			UserPrincipalName: principal.UserPrincipalName,
-			RoleDisplayNames:  roleNames,
-			Limitations:       defaultPrivilegedCALimitations(),
+			PrincipalID:             principal.PrincipalID,
+			PrincipalType:           principal.PrincipalType,
+			DisplayName:             principal.DisplayName,
+			UserPrincipalName:       principal.UserPrincipalName,
+			RoleDisplayNames:        roleNames,
+			DirectGroupIDs:          directGroupIDs,
+			DirectGroupDisplayNames: directGroupNames,
+			Limitations:             defaultPrivilegedCALimitations(),
 		}
 
 		coveringIDs := make(map[string]struct{})
@@ -85,7 +100,8 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 			roleTargeted := intersects(policy.IncludedRoles, roleIDs)
 			allUsersTargeted := includesAllUsers(policy.IncludedUsers)
 			principalIncluded := principalMatch(policy.IncludedUsers, principal.PrincipalID, principal.UserPrincipalName)
-			targeted := roleTargeted || allUsersTargeted || principalIncluded
+			groupIncluded := intersects(policy.IncludedGroups, directGroupIDs)
+			targeted := roleTargeted || allUsersTargeted || principalIncluded || groupIncluded
 			if !targeted {
 				continue
 			}
@@ -98,13 +114,31 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 
 			coveringIDs[policyID] = struct{}{}
 			coveringNames[policyName] = struct{}{}
-			evidence.CoverageEvidence = append(evidence.CoverageEvidence, fmt.Sprintf("Observed enabled policy %q with MFA/authentication-strength grant control targeting this privileged principal context.", policyName))
+			if principalIncluded {
+				evidence.CoverageEvidence = append(evidence.CoverageEvidence, fmt.Sprintf("Direct principal evidence: enabled policy %q with MFA/authentication-strength grant control directly includes this principal.", policyName))
+			}
+			if groupIncluded {
+				evidence.CoverageEvidence = append(evidence.CoverageEvidence, fmt.Sprintf("Direct group membership evidence: enabled policy %q with MFA/authentication-strength grant control includes a group this principal is directly a member of.", policyName))
+			}
+			if roleTargeted {
+				evidence.CoverageEvidence = append(evidence.CoverageEvidence, fmt.Sprintf("Role-target evidence: enabled policy %q with MFA/authentication-strength grant control includes one or more directory roles assigned to this privileged principal.", policyName))
+			}
+			if allUsersTargeted {
+				evidence.CoverageEvidence = append(evidence.CoverageEvidence, fmt.Sprintf("All-users evidence: enabled policy %q with MFA/authentication-strength grant control targets all users.", policyName))
+			}
 
-			if principalMatch(policy.ExcludedUsers, principal.PrincipalID, principal.UserPrincipalName) {
+			principalExcluded := principalMatch(policy.ExcludedUsers, principal.PrincipalID, principal.UserPrincipalName)
+			groupExcluded := intersects(policy.ExcludedGroups, directGroupIDs)
+			if principalExcluded || groupExcluded {
 				hasDirectExclusion = true
 				excludingIDs[policyID] = struct{}{}
 				excludingNames[policyName] = struct{}{}
-				evidence.ExclusionEvidence = append(evidence.ExclusionEvidence, fmt.Sprintf("Direct exclusion observed: policy %q excludes this principal by explicit user identifier.", policyName))
+				if principalExcluded {
+					evidence.ExclusionEvidence = append(evidence.ExclusionEvidence, fmt.Sprintf("Direct principal exclusion evidence: policy %q excludes this principal by explicit user identifier.", policyName))
+				}
+				if groupExcluded {
+					evidence.ExclusionEvidence = append(evidence.ExclusionEvidence, fmt.Sprintf("Direct group membership exclusion evidence: policy %q excludes a group this principal is directly a member of.", policyName))
+				}
 				continue
 			}
 
@@ -112,7 +146,7 @@ func DerivePrivilegedCAEvidence(bundle facts.Bundle) PrivilegedCAEvidenceSummary
 				hasPossibleExclusion = true
 				excludingIDs[policyID] = struct{}{}
 				excludingNames[policyName] = struct{}{}
-				evidence.ExclusionEvidence = append(evidence.ExclusionEvidence, fmt.Sprintf("Possible exclusion observed: policy %q targets this principal context and excludes one or more users, but principal-level exclusion could not be proven from current facts.", policyName))
+				evidence.ExclusionEvidence = append(evidence.ExclusionEvidence, fmt.Sprintf("Possible-only exclusion evidence: policy %q targets this principal context and excludes one or more users, but no direct principal-level or direct group-level exclusion proof was observed from current facts.", policyName))
 			}
 		}
 
@@ -151,6 +185,8 @@ func normalizePrivilegedCAEvidenceSummary(summary PrivilegedCAEvidenceSummary) P
 	for i := range out.Principals {
 		principal := &out.Principals[i]
 		principal.RoleDisplayNames = sortedStrings(principal.RoleDisplayNames)
+		principal.DirectGroupIDs = sortedStrings(principal.DirectGroupIDs)
+		principal.DirectGroupDisplayNames = sortedStrings(principal.DirectGroupDisplayNames)
 		principal.ObservedCoveringPolicyIDs = sortedStrings(principal.ObservedCoveringPolicyIDs)
 		principal.ObservedCoveringPolicyNames = sortedStrings(principal.ObservedCoveringPolicyNames)
 		principal.ObservedExcludingPolicyIDs = sortedStrings(principal.ObservedExcludingPolicyIDs)
@@ -160,6 +196,30 @@ func normalizePrivilegedCAEvidenceSummary(summary PrivilegedCAEvidenceSummary) P
 		principal.Limitations = sortedStrings(principal.Limitations)
 	}
 	return out
+}
+
+func mergeDirectGroupIDs(memberships []facts.PrincipalGroupMembership) []string {
+	set := make(map[string]struct{})
+	for _, membership := range memberships {
+		groupID := strings.TrimSpace(membership.GroupID)
+		if groupID == "" {
+			continue
+		}
+		set[groupID] = struct{}{}
+	}
+	return sortedKeys(set)
+}
+
+func mergeDirectGroupNames(memberships []facts.PrincipalGroupMembership) []string {
+	set := make(map[string]struct{})
+	for _, membership := range memberships {
+		name := strings.TrimSpace(membership.GroupDisplayName)
+		if name == "" {
+			continue
+		}
+		set[name] = struct{}{}
+	}
+	return sortedKeys(set)
 }
 
 func mergeRoleIDs(roleIDs []string, assignments []facts.DirectoryRoleAssignment) []string {
@@ -261,9 +321,10 @@ func intersects(a []string, b []string) bool {
 
 func defaultPrivilegedCALimitations() []string {
 	return []string{
-		"Group membership expansion is not implemented in this release.",
-		"Nested and dynamic group evaluation is not implemented in this release.",
+		"Nested and transitive group expansion is not implemented in this release.",
+		"Dynamic group rule evaluation is not implemented in this release.",
 		"Emergency-access or break-glass account designation is not known from current facts.",
+		"Full effective Conditional Access policy simulation is not implemented in this release.",
 		"Conditional Access conditions (for example app, platform, client app, location, or risk) can materially change effective coverage.",
 		"Report-only policies are intentionally excluded from enforcement evidence.",
 	}

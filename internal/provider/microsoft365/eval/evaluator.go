@@ -316,6 +316,8 @@ func privilegedCAEvidenceDetails(summary PrivilegedCAEvidenceSummary) map[string
 			"display_name":                    principal.DisplayName,
 			"user_principal_name":             principal.UserPrincipalName,
 			"role_display_names":              append([]string(nil), principal.RoleDisplayNames...),
+			"direct_group_ids":                append([]string(nil), principal.DirectGroupIDs...),
+			"direct_group_display_names":      append([]string(nil), principal.DirectGroupDisplayNames...),
 			"observed_covering_policy_ids":    append([]string(nil), principal.ObservedCoveringPolicyIDs...),
 			"observed_covering_policy_names":  append([]string(nil), principal.ObservedCoveringPolicyNames...),
 			"observed_excluding_policy_ids":   append([]string(nil), principal.ObservedExcludingPolicyIDs...),

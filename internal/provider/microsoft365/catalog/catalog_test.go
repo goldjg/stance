@@ -55,6 +55,13 @@ func TestChecksFromRuleMetadata(t *testing.T) {
 	if _, ok := findCheckByID(checks, "ENTRA-CA-008"); !ok {
 		t.Fatalf("expected ENTRA-CA-008 in catalog")
 	}
+	coverage, ok := findCheckByID(checks, "ENTRA-CA-006")
+	if !ok {
+		t.Fatalf("expected ENTRA-CA-006 in catalog")
+	}
+	if !containsString(coverage.DataRequirements, "principal_group_memberships") {
+		t.Fatalf("expected principal_group_memberships data requirement on ENTRA-CA-006, got %#v", coverage.DataRequirements)
+	}
 }
 
 func findCheckByID(checks []corecatalog.CheckInfo, id string) (corecatalog.CheckInfo, bool) {
@@ -64,4 +71,13 @@ func findCheckByID(checks []corecatalog.CheckInfo, id string) (corecatalog.Check
 		}
 	}
 	return corecatalog.CheckInfo{}, false
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
