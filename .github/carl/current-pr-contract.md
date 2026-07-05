@@ -1,28 +1,27 @@
 # Current PR contract
 
 ## PR focus
-Add cautious privileged principal Conditional Access evidence evaluation.
+Add structured evidence details to durable result JSON for cautious privileged principal Conditional Access evidence findings.
 
 ## Included
-- Add Microsoft 365 privileged CA evidence model/helper under `internal/provider/microsoft365/eval`.
-- Derive cautious privileged-principal CA evidence from existing facts:
-  - conditional access policies
-  - directory role assignments
-  - privileged principals
-- Add cautious privileged CA evidence checks:
+- Add optional provider-neutral structured finding details field in core result plumbing.
+- Populate privileged CA machine-readable evidence payload in finding details for:
   - `ENTRA-CA-006`
   - `ENTRA-CA-007`
   - `ENTRA-CA-008`
-- Update evaluator/catalog metadata and check discovery output.
+- Keep `stance check --format json` and `stance report --results ... --format json` preserving finding details.
+- Add/adjust tests for details serialization/round-trip and report compatibility.
 - Update docs and governance artifacts:
   - `README.md`
   - `docs/maester-parity.md`
   - `.github/carl/memory.md`
   - `.github/carl/current-pr-contract.md`
-- Add/update tests for evidence derivation, cautious check behavior, catalog/CLI discovery, and report/SARIF compatibility.
 
 ## Excluded
 - New collectors or Graph endpoint additions.
+- New checks unless strictly required for result/detail plumbing.
+- Full Markdown/HTML per-principal evidence tables.
+- SARIF source locations or full tenant evidence dumps.
 - Graph group expansion (including nested/dynamic groups).
 - Emergency-access/break-glass pass/fail logic.
 - Full effective Conditional Access simulation or What-If parity.

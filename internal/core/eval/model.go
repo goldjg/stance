@@ -17,6 +17,7 @@ type Finding struct {
 	Status       Status         `json:"status"`
 	Summary      string         `json:"summary"`
 	MatchedItems []string       `json:"matched_items,omitempty"`
+	Details      map[string]any `json:"details,omitempty"`
 }
 
 type Result struct {

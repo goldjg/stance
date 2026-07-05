@@ -209,3 +209,42 @@ func TestSARIFOutput(t *testing.T) {
 		t.Fatalf("sarif should not invent source locations: %s", s)
 	}
 }
+
+func TestRenderersHandleFindingDetails(t *testing.T) {
+	doc := sampleDocument()
+	doc.Findings[0].Details = map[string]any{
+		"privileged_ca_evidence": map[string]any{
+			"summary": map[string]any{
+				"total_privileged_principals": 2,
+			},
+			"principals": []map[string]any{
+				{"principal_id": "principal-1"},
+				{"principal_id": "principal-2"},
+			},
+		},
+	}
+
+	if _, err := JSON(doc); err != nil {
+		t.Fatalf("JSON should support findings with details: %v", err)
+	}
+	if got := Markdown(doc); len(got) == 0 {
+		t.Fatalf("markdown output should not be empty")
+	}
+	if _, err := HTML(doc); err != nil {
+		t.Fatalf("HTML should support findings with details: %v", err)
+	}
+	junit, err := JUnit(doc)
+	if err != nil {
+		t.Fatalf("JUnit should support findings with details: %v", err)
+	}
+	if strings.Contains(string(junit), "privileged_ca_evidence") {
+		t.Fatalf("JUnit output should remain compact and not include structured details: %s", string(junit))
+	}
+	sarif, err := SARIF(doc)
+	if err != nil {
+		t.Fatalf("SARIF should support findings with details: %v", err)
+	}
+	if strings.Contains(string(sarif), `"locations"`) {
+		t.Fatalf("sarif should not invent source locations: %s", string(sarif))
+	}
+}
