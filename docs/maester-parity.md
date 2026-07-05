@@ -15,6 +15,7 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Direct privileged-principal group correlation now tracks per-principal direct-group resolution status so failed/unknown lookups are surfaced as evidence limitations instead of being indistinguishable from no direct groups observed.
 - Existing check outputs are JSON, Markdown, JUnit, HTML, and SARIF.
 - Durable result JSON includes machine-readable structured finding details for privileged-principal Conditional Access evidence (`ENTRA-CA-006/007/008`) to improve CI/system handoff.
+- STANCE now includes informational collection completeness/readiness signalling (`ENTRA-COLLECT-001`) for currently implemented Entra evidence checks, including machine-readable `details.collection_completeness`.
 
 ## Planned parity milestones
 
@@ -87,6 +88,7 @@ This matrix uses only these status values:
 - Privileged account and emergency-access analysis remains partial/future; current CA and role checks are intentionally evidence-first and do not implement break-glass pass/fail decisions.
 - Nested/transitive group expansion, dynamic group evaluation, and full Conditional Access What-If style simulation remain future work.
 - Full effective Conditional Access simulation and emergency-access assessment remain future work despite improved machine-readable evidence handoff.
+- Emergency-access/break-glass pass/fail assessment and full effective Conditional Access What-If parity remain future work despite improved collection completeness/readiness signalling.
 - Richer baseline/compliance mapping and configuration controls.
 - Drift history and longitudinal comparison workflows.
 - Azure DevOps integration examples/documentation parity with GitHub examples.

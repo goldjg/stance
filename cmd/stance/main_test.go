@@ -185,6 +185,36 @@ func TestRunCheckJSONIncludesPrivilegedCAEvidenceDetails(t *testing.T) {
 	if found != 3 {
 		t.Fatalf("expected details for 3 privileged CA findings, found %d", found)
 	}
+
+	collectFound := false
+	for _, item := range findings {
+		finding, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		ruleID, _ := finding["rule_id"].(string)
+		if ruleID != "ENTRA-COLLECT-001" {
+			continue
+		}
+		collectFound = true
+		details, ok := finding["details"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected details object on %s, got %#v", ruleID, finding["details"])
+		}
+		completeness, ok := details["collection_completeness"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected collection_completeness details on %s, got %#v", ruleID, details["collection_completeness"])
+		}
+		if completeness["completeness_status"] == "" {
+			t.Fatalf("expected completeness_status in %s details, got %#v", ruleID, completeness)
+		}
+		if _, ok := completeness["limitations"].([]any); !ok {
+			t.Fatalf("expected limitations array in %s details, got %#v", ruleID, completeness["limitations"])
+		}
+	}
+	if !collectFound {
+		t.Fatalf("expected ENTRA-COLLECT-001 finding with collection_completeness details")
+	}
 }
 
 func TestRunCheckHTML(t *testing.T) {
@@ -572,6 +602,9 @@ func TestRunChecksDefaultText(t *testing.T) {
 	if !strings.Contains(out.String(), "ENTRA-CA-006") || !strings.Contains(out.String(), "ENTRA-CA-008") {
 		t.Fatalf("expected privileged CA evidence checks output: %q", out.String())
 	}
+	if !strings.Contains(out.String(), "ENTRA-COLLECT-001") {
+		t.Fatalf("expected collection completeness check output: %q", out.String())
+	}
 }
 
 func TestRunChecksSuiteFilter(t *testing.T) {
@@ -605,6 +638,16 @@ func TestRunChecksJSON(t *testing.T) {
 	}
 	if parsed[0]["provider"] != "microsoft365" {
 		t.Fatalf("unexpected provider in json output: %#v", parsed[0]["provider"])
+	}
+	containsCollect := false
+	for _, item := range parsed {
+		if item["id"] == "ENTRA-COLLECT-001" {
+			containsCollect = true
+			break
+		}
+	}
+	if !containsCollect {
+		t.Fatalf("expected ENTRA-COLLECT-001 in checks json output, got %#v", parsed)
 	}
 }
 

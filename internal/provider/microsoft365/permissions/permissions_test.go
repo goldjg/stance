@@ -52,6 +52,19 @@ func TestForChecksPrivilegedCAEvidencePermissions(t *testing.T) {
 	}
 }
 
+func TestForChecksCollectionCompletenessPermissions(t *testing.T) {
+	perms, err := Resolver{}.ForChecks([]string{"ENTRA-COLLECT-001"})
+	if err != nil {
+		t.Fatalf("ForChecks returned error: %v", err)
+	}
+	if !containsPermission(perms, "Organization.Read.All") ||
+		!containsPermission(perms, "Policy.Read.All") ||
+		!containsPermission(perms, "RoleManagement.Read.Directory") ||
+		!containsPermission(perms, "Directory.Read.All") {
+		t.Fatalf("expected Organization.Read.All, Policy.Read.All, RoleManagement.Read.Directory, and Directory.Read.All, got %v", perms)
+	}
+}
+
 func containsPermission(perms []string, target string) bool {
 	for _, p := range perms {
 		if p == target {
