@@ -6,7 +6,7 @@ STANCE uses a provider-oriented architecture: core command/report/evaluation con
 
 The first provider is `microsoft365`. It talks directly to Microsoft APIs, collects tenant facts once, evaluates checks locally, and emits CI-friendly reports without PowerShell runtime/module dependencies.
 
-The repository is being prepared to move from `goldjg/stance-365` to `goldjg/stance`.
+Repository canonical location: `goldjg/stance`.
 
 ## Project thesis
 
