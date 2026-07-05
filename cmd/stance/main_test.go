@@ -69,8 +69,22 @@ func TestRunCheckJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
 	}
-	if !strings.Contains(out.String(), "ENTRA-CA-001") {
-		t.Fatalf("unexpected check output: %q", out.String())
+	var parsed map[string]any
+	if decodeErr := json.Unmarshal(out.Bytes(), &parsed); decodeErr != nil {
+		t.Fatalf("expected json output, decode error: %v; output=%q", decodeErr, out.String())
+	}
+	if parsed["schema_version"] != "stance.result.v1" {
+		t.Fatalf("expected schema_version stance.result.v1, got %#v", parsed["schema_version"])
+	}
+	if parsed["provider"] != "microsoft365" {
+		t.Fatalf("expected provider microsoft365, got %#v", parsed["provider"])
+	}
+	tool, ok := parsed["tool"].(map[string]any)
+	if !ok || tool["name"] != "stance" {
+		t.Fatalf("expected tool metadata with name=stance, got %#v", parsed["tool"])
+	}
+	if _, ok := parsed["findings"].([]any); !ok {
+		t.Fatalf("expected findings array in result document, got %#v", parsed["findings"])
 	}
 }
 
@@ -91,6 +105,153 @@ func TestRunCheckHTML(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "<!doctype html>") || !strings.Contains(out.String(), "STANCE check report") {
 		t.Fatalf("unexpected html output: %q", out.String())
+	}
+}
+
+func TestRunCheckSARIF(t *testing.T) {
+	tmpDir := t.TempDir()
+	factsPath := filepath.Join(tmpDir, "facts.json")
+	factsPayload := `{"conditional_access_policies":[{"display_name":"P1","state":"disabled"}]}`
+	if err := os.WriteFile(factsPath, []byte(factsPayload), 0o600); err != nil {
+		t.Fatalf("write facts: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"check", "--facts", factsPath, "--format", "sarif"}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+	if !strings.Contains(out.String(), `"version": "2.1.0"`) || !strings.Contains(out.String(), `"name": "STANCE"`) {
+		t.Fatalf("unexpected sarif output: %q", out.String())
+	}
+}
+
+func TestRunReportRequiresResults(t *testing.T) {
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"report", "--format", "html"}, &out, &err)
+	if code == 0 {
+		t.Fatalf("expected failure without --results")
+	}
+	if !strings.Contains(err.String(), "report requires --results") {
+		t.Fatalf("unexpected stderr: %q", err.String())
+	}
+}
+
+func TestRunReportMalformedJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	resultsPath := filepath.Join(tmpDir, "results.json")
+	if err := os.WriteFile(resultsPath, []byte("{bad-json"), 0o600); err != nil {
+		t.Fatalf("write malformed results: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"report", "--results", resultsPath, "--format", "html"}, &out, &err)
+	if code == 0 {
+		t.Fatalf("expected failure for malformed result json")
+	}
+	if !strings.Contains(err.String(), "report failed to parse results") {
+		t.Fatalf("unexpected stderr: %q", err.String())
+	}
+}
+
+func TestRunReportUnsupportedFormat(t *testing.T) {
+	tmpDir := t.TempDir()
+	resultsPath := filepath.Join(tmpDir, "results.json")
+	resultsPayload := `{
+  "schema_version": "stance.result.v1",
+  "generated_at_utc": "2026-07-05T18:16:07Z",
+  "tool": {"name": "stance", "version": "dev", "commit": "none", "date": "unknown"},
+  "provider": "microsoft365",
+  "suite": "entra",
+  "findings": []
+}`
+	if err := os.WriteFile(resultsPath, []byte(resultsPayload), 0o600); err != nil {
+		t.Fatalf("write results: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"report", "--results", resultsPath, "--format", "csv"}, &out, &err)
+	if code == 0 {
+		t.Fatalf("expected unsupported format failure")
+	}
+	if !strings.Contains(err.String(), "unsupported format: csv") {
+		t.Fatalf("unexpected stderr: %q", err.String())
+	}
+}
+
+func TestRunReportOfflineSARIF(t *testing.T) {
+	tmpDir := t.TempDir()
+	resultsPath := filepath.Join(tmpDir, "results.json")
+	resultsPayload := `{
+  "schema_version": "stance.result.v1",
+  "generated_at_utc": "2026-07-05T18:16:07Z",
+  "tool": {"name": "stance", "version": "dev", "commit": "none", "date": "unknown"},
+  "provider": "microsoft365",
+  "suite": "entra",
+  "findings": [
+    {"rule_id":"ENTRA-CA-001","title":"Disabled CA policies","severity":"medium","status":"fail","summary":"Detected disabled policies."},
+    {"rule_id":"ENTRA-CA-005","title":"User exclusions observed","severity":"low","status":"info","summary":"Observed exclusions."}
+  ]
+}`
+	if err := os.WriteFile(resultsPath, []byte(resultsPayload), 0o600); err != nil {
+		t.Fatalf("write results: %v", err)
+	}
+	t.Setenv("STANCE_CLIENT_SECRET", "not-needed")
+	t.Setenv("STANCE_CLIENT_ASSERTION", "not-needed")
+	t.Setenv("STANCE_FEDERATED_TOKEN_FILE", "/nonexistent")
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"report", "--results", resultsPath, "--format", "sarif"}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+	if !strings.Contains(out.String(), `"version": "2.1.0"`) || !strings.Contains(out.String(), `"ruleId": "ENTRA-CA-001"`) {
+		t.Fatalf("unexpected sarif output: %q", out.String())
+	}
+	if strings.Contains(out.String(), `"locations"`) {
+		t.Fatalf("sarif output should not include synthetic locations: %q", out.String())
+	}
+}
+
+func TestRunReportWritesOutputFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	resultsPath := filepath.Join(tmpDir, "results.json")
+	outPath := filepath.Join(tmpDir, "report.md")
+	resultsPayload := `{
+  "schema_version": "stance.result.v1",
+  "generated_at_utc": "2026-07-05T18:16:07Z",
+  "tool": {"name": "stance", "version": "dev", "commit": "none", "date": "unknown"},
+  "provider": "microsoft365",
+  "suite": "entra",
+  "findings": []
+}`
+	if err := os.WriteFile(resultsPath, []byte(resultsPayload), 0o600); err != nil {
+		t.Fatalf("write results: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	code := run([]string{"report", "--results", resultsPath, "--format", "markdown", "--out", outPath}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+
+	info, statErr := os.Stat(outPath)
+	if statErr != nil {
+		t.Fatalf("expected output file: %v", statErr)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("expected 0600 mode, got %o", info.Mode().Perm())
 	}
 }
 

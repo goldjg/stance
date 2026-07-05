@@ -1,4 +1,14 @@
 {
+  "schema_version": "stance.result.v1",
+  "generated_at_utc": "2026-07-05T18:16:07Z",
+  "tool": {
+    "name": "stance",
+    "version": "dev",
+    "commit": "none",
+    "date": "unknown"
+  },
+  "provider": "microsoft365",
+  "suite": "entra",
   "findings": [
     {
       "rule_id": "TEST-001",

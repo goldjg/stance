@@ -10,10 +10,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	corecatalog "github.com/goldjg/stance/internal/core/catalog"
+	coreeval "github.com/goldjg/stance/internal/core/eval"
 	corepermissions "github.com/goldjg/stance/internal/core/permissions"
 	"github.com/goldjg/stance/internal/core/report"
+	coreresult "github.com/goldjg/stance/internal/core/result"
 	"github.com/goldjg/stance/internal/httpclient"
 	microsoft365auth "github.com/goldjg/stance/internal/provider/microsoft365/auth"
 	microsoft365catalog "github.com/goldjg/stance/internal/provider/microsoft365/catalog"
@@ -74,8 +77,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "checks":
 		return runChecks(args[1:], stdout, stderr)
 	case "report":
-		fmt.Fprintf(stderr, "%q is planned but not implemented yet\n", strings.Join(args, " "))
-		return 1
+		return runReport(args[1:], stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n\n", args[0])
 		printUsage(stderr)
@@ -178,6 +180,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	factsPath := ""
 	format := "json"
 	outPath := ""
+	selectedSuite := ""
 
 	for i := 0; i < len(filtered); i++ {
 		if i+1 >= len(filtered) {
@@ -192,6 +195,9 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 			i++
 		case "--out":
 			outPath = filtered[i+1]
+			i++
+		case "--suite":
+			selectedSuite = filtered[i+1]
 			i++
 		}
 	}
@@ -219,16 +225,24 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	}
 
 	result := microsoft365eval.EvaluateDefault(bundle)
+	suite := strings.TrimSpace(selectedSuite)
+	if suite == "" {
+		suite = inferSuiteFromFindings(result.Findings, microsoft365catalog.Checks())
+	}
+	doc := coreresult.NewDocument(providerName, suite, result.Findings, toolMetadata(), time.Now().UTC())
+
 	var payload []byte
 	switch format {
 	case "json":
-		payload, err = report.JSON(result)
+		payload, err = report.JSON(doc)
 	case "md", "markdown":
-		payload = report.Markdown(result)
+		payload = report.Markdown(doc)
 	case "junit":
-		payload, err = report.JUnit(result)
+		payload, err = report.JUnit(doc)
 	case "html":
-		payload, err = report.HTML(result)
+		payload, err = report.HTML(doc)
+	case "sarif":
+		payload, err = report.SARIF(doc)
 	default:
 		fmt.Fprintf(stderr, "unsupported format: %s\n", format)
 		return 1
@@ -248,6 +262,82 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 
 	if err := os.WriteFile(outPath, payload, 0o600); err != nil {
 		fmt.Fprintf(stderr, "check write failed: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "wrote %s report to %s\n", format, outPath)
+	return 0
+}
+
+func runReport(args []string, stdout, stderr io.Writer) int {
+	resultsPath := ""
+	format := "json"
+	outPath := ""
+
+	for i := 0; i < len(args); i++ {
+		if i+1 >= len(args) {
+			break
+		}
+		switch args[i] {
+		case "--results":
+			resultsPath = args[i+1]
+			i++
+		case "--format":
+			format = args[i+1]
+			i++
+		case "--out":
+			outPath = args[i+1]
+			i++
+		}
+	}
+
+	if strings.TrimSpace(resultsPath) == "" {
+		fmt.Fprintln(stderr, "report requires --results <path>")
+		return 1
+	}
+
+	raw, err := os.ReadFile(resultsPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "report failed to read results: %v\n", err)
+		return 1
+	}
+
+	doc, err := coreresult.ParseJSON(raw)
+	if err != nil {
+		fmt.Fprintf(stderr, "report failed to parse results: %v\n", err)
+		return 1
+	}
+
+	var payload []byte
+	switch format {
+	case "json":
+		payload, err = report.JSON(doc)
+	case "md", "markdown":
+		payload = report.Markdown(doc)
+	case "junit":
+		payload, err = report.JUnit(doc)
+	case "html":
+		payload, err = report.HTML(doc)
+	case "sarif":
+		payload, err = report.SARIF(doc)
+	default:
+		fmt.Fprintf(stderr, "unsupported format: %s\n", format)
+		return 1
+	}
+	if err != nil {
+		fmt.Fprintf(stderr, "report generation failed: %v\n", err)
+		return 1
+	}
+
+	if outPath == "" {
+		_, _ = stdout.Write(payload)
+		if len(payload) == 0 || payload[len(payload)-1] != '\n' {
+			fmt.Fprintln(stdout)
+		}
+		return 0
+	}
+
+	if err := os.WriteFile(outPath, payload, 0o600); err != nil {
+		fmt.Fprintf(stderr, "report write failed: %v\n", err)
 		return 1
 	}
 	fmt.Fprintf(stdout, "wrote %s report to %s\n", format, outPath)
@@ -490,7 +580,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  providers    List implemented providers")
 	fmt.Fprintln(w, "  suites       List suites for a provider (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  checks       List checks for a provider (--provider defaults to microsoft365)")
-	fmt.Fprintln(w, "  report       (planned) Render reports from results")
+	fmt.Fprintln(w, "  report       Convert result JSON to report output formats")
 }
 
 func defaultConfigFile() string {
@@ -532,4 +622,36 @@ func parseProviderFlag(args []string) (string, []string, error) {
 		return "", nil, errors.New("provider cannot be empty")
 	}
 	return provider, filtered, nil
+}
+
+func inferSuiteFromFindings(findings []coreeval.Finding, checks []corecatalog.CheckInfo) string {
+	suiteByID := make(map[string]string, len(checks))
+	for _, check := range checks {
+		suiteByID[check.ID] = check.Suite
+	}
+
+	unique := make(map[string]struct{})
+	for _, finding := range findings {
+		suite := strings.TrimSpace(suiteByID[finding.RuleID])
+		if suite == "" {
+			return ""
+		}
+		unique[suite] = struct{}{}
+		if len(unique) > 1 {
+			return ""
+		}
+	}
+	for suite := range unique {
+		return suite
+	}
+	return ""
+}
+
+func toolMetadata() coreresult.ToolMetadata {
+	return coreresult.ToolMetadata{
+		Name:    "stance",
+		Version: version.Version,
+		Commit:  version.Commit,
+		Date:    version.Date,
+	}
 }

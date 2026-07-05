@@ -40,4 +40,7 @@
 - Parity is defined as equivalent user outcomes, not copied implementation lineage.
 - Provider/suite/check catalog metadata is the discovery foundation for future parity milestones.
 - HTML output for `stance check --format html` is the first reporting parity slice.
+- `stance report` is implemented as an offline result conversion command from durable STANCE result JSON.
+- `stance check --format json` emits the durable STANCE result document as handoff format to `stance report`.
+- SARIF output (`--format sarif`) is implemented for both `stance check` and `stance report`.
 - This PR intentionally adds no new Microsoft API collectors and no new posture checks.
