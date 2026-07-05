@@ -2,5 +2,5 @@
 
 | Rule ID | Severity | Status | Summary |
 | --- | --- | --- | --- |
-| ENTRA-CA-001 | medium | fail | Detected disabled policies. |
-| ENTRA-CA-002 | low | pass | No report-only policies detected. |
+| TEST-001 | medium | fail | Detected failing condition. |
+| TEST-002 | low | pass | No failing conditions detected. |

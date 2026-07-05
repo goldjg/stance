@@ -1,21 +1,21 @@
 {
   "findings": [
     {
-      "rule_id": "ENTRA-CA-001",
-      "title": "Disabled Conditional Access policies are identified",
+      "rule_id": "TEST-001",
+      "title": "First generic posture finding",
       "severity": "medium",
       "status": "fail",
-      "summary": "Detected disabled policies.",
+      "summary": "Detected failing condition.",
       "matched_items": [
-        "Disabled policy"
+        "Matched item A"
       ]
     },
     {
-      "rule_id": "ENTRA-CA-002",
-      "title": "Report-only Conditional Access policies are identified",
+      "rule_id": "TEST-002",
+      "title": "Second generic posture finding",
       "severity": "low",
       "status": "pass",
-      "summary": "No report-only policies detected."
+      "summary": "No failing conditions detected."
     }
   ]
 }

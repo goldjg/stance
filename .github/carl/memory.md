@@ -4,6 +4,7 @@
 - Name: STANCE (Secure Tenant And Configuration Evaluator).
 - Runtime: 100% Go.
 - Mission: provider-oriented posture evaluation through direct API collection and local rule evaluation.
+- STANCE is the generic product/CLI identity; `microsoft365` is the first provider, not part of the product name.
 
 ## Durable constraints
 - Do not introduce PowerShell runtime dependencies.
