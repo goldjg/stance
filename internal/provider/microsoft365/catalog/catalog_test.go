@@ -25,15 +25,15 @@ func TestSuitesIncludesEntra(t *testing.T) {
 	if suite.ID != "entra" {
 		t.Fatalf("expected entra suite, got %s", suite.ID)
 	}
-	if suite.CheckCount != 10 {
-		t.Fatalf("expected 10 checks in entra suite, got %d", suite.CheckCount)
+	if suite.CheckCount != 11 {
+		t.Fatalf("expected 11 checks in entra suite, got %d", suite.CheckCount)
 	}
 }
 
 func TestChecksFromRuleMetadata(t *testing.T) {
 	checks := Checks()
-	if len(checks) != 10 {
-		t.Fatalf("expected 10 checks, got %d", len(checks))
+	if len(checks) != 11 {
+		t.Fatalf("expected 11 checks, got %d", len(checks))
 	}
 
 	first := checks[0]
@@ -54,6 +54,16 @@ func TestChecksFromRuleMetadata(t *testing.T) {
 	}
 	if _, ok := findCheckByID(checks, "ENTRA-CA-008"); !ok {
 		t.Fatalf("expected ENTRA-CA-008 in catalog")
+	}
+	collect, ok := findCheckByID(checks, "ENTRA-COLLECT-001")
+	if !ok {
+		t.Fatalf("expected ENTRA-COLLECT-001 in catalog")
+	}
+	if !containsString(collect.DataRequirements, "organization") {
+		t.Fatalf("expected organization data requirement on ENTRA-COLLECT-001, got %#v", collect.DataRequirements)
+	}
+	if !containsString(collect.DataRequirements, "principal_group_resolutions") {
+		t.Fatalf("expected principal_group_resolutions data requirement on ENTRA-COLLECT-001, got %#v", collect.DataRequirements)
 	}
 	coverage, ok := findCheckByID(checks, "ENTRA-CA-006")
 	if !ok {

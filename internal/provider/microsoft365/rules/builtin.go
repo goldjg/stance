@@ -3,8 +3,9 @@ package rules
 import corerules "github.com/goldjg/stance/internal/core/rules"
 
 func BuiltinRules() []corerules.Rule {
-	out := make([]corerules.Rule, 0, len(BuiltinConditionalAccessRules())+len(BuiltinDirectoryRoleRules()))
+	out := make([]corerules.Rule, 0, len(BuiltinConditionalAccessRules())+len(BuiltinCollectionRules())+len(BuiltinDirectoryRoleRules()))
 	out = append(out, BuiltinConditionalAccessRules()...)
+	out = append(out, BuiltinCollectionRules()...)
 	out = append(out, BuiltinDirectoryRoleRules()...)
 	return out
 }
@@ -125,6 +126,22 @@ func BuiltinDirectoryRoleRules() []corerules.Rule {
 			DataRequirements:    []string{"directory_role_assignments"},
 			Remediation:         "Review principal detail resolution coverage; Directory.Read.All may be required for complete principal metadata in some tenants.",
 			References:          []string{"https://learn.microsoft.com/graph/api/directoryobject-get?view=graph-rest-1.0"},
+		},
+	}
+}
+
+func BuiltinCollectionRules() []corerules.Rule {
+	return []corerules.Rule{
+		{
+			ID:                  "ENTRA-COLLECT-001",
+			Title:               "Microsoft 365 collection completeness evidence is observed",
+			Severity:            corerules.SeverityLow,
+			Category:            "collection-completeness",
+			Service:             "entra",
+			RequiredPermissions: []string{"Organization.Read.All", "Policy.Read.All", "RoleManagement.Read.Directory", "Directory.Read.All"},
+			DataRequirements:    []string{"organization", "conditional_access_policies", "directory_role_definitions", "directory_role_assignments", "privileged_principals", "principal_group_memberships", "principal_group_resolutions"},
+			Remediation:         "Use this readiness signal to identify collection gaps before drawing broad posture conclusions from current findings.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/conditional-access/overview"},
 		},
 	}
 }

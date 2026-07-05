@@ -80,3 +80,9 @@
 - STANCE durable result JSON can carry optional provider-generated structured finding details through provider-neutral core finding fields.
 - Privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) now include per-principal machine-readable evidence details in JSON results.
 - Human-readable outputs (Markdown/HTML) and SARIF remain summary-oriented for privileged CA evidence in this phase.
+- STANCE now includes an informational Microsoft 365 collection completeness check (`ENTRA-COLLECT-001`).
+- Collection completeness is evidence/readiness signalling only and must not be treated as a tenant score.
+- Missing or failed direct group resolution is surfaced as partial evidence in collection completeness signalling.
+- This slice adds no new collectors or Microsoft Graph endpoints.
+- This slice adds no non-Entra workload expansion.
+- This slice adds no PowerShell/runtime/module dependencies, shell-outs, Graph PowerShell, Azure CLI, or Microsoft SDK dependency.

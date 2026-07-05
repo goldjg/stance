@@ -18,8 +18,8 @@ func TestEvaluateDefault(t *testing.T) {
 	}
 
 	result := EvaluateDefault(bundle)
-	if len(result.Findings) != 10 {
-		t.Fatalf("expected 10 findings, got %d", len(result.Findings))
+	if len(result.Findings) != 11 {
+		t.Fatalf("expected 11 findings, got %d", len(result.Findings))
 	}
 	if findingByRuleID(result, "ENTRA-CA-001").Status != coreeval.StatusFail {
 		t.Fatalf("expected ENTRA-CA-001 to fail")
@@ -58,6 +58,11 @@ func TestEvaluateDefault(t *testing.T) {
 	if roleCompleteness := findingByRuleID(result, "ENTRA-ROLE-002"); roleCompleteness.Status != coreeval.StatusInfo {
 		t.Fatalf("expected incomplete principal details finding to be info, got %+v", roleCompleteness)
 	}
+	collect := findingByRuleID(result, "ENTRA-COLLECT-001")
+	if collect.Status != coreeval.StatusInfo || collect.Severity != corerules.SeverityLow {
+		t.Fatalf("expected collection completeness finding to be informational low severity, got %+v", collect)
+	}
+	assertCollectionCompletenessDetails(t, collect)
 }
 
 func TestEvaluateDefaultAuthStrengthCountsAsMFAEvidence(t *testing.T) {
@@ -347,5 +352,29 @@ func assertPrivilegedCAEvidenceDetails(t *testing.T, finding coreeval.Finding) {
 	}
 	if _, ok := root["principals"].([]any); !ok {
 		t.Fatalf("expected principals array in details on %s, got %#v", finding.RuleID, root["principals"])
+	}
+}
+
+func assertCollectionCompletenessDetails(t *testing.T, finding coreeval.Finding) {
+	t.Helper()
+	root, ok := finding.Details["collection_completeness"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected collection_completeness details on %s, got %#v", finding.RuleID, finding.Details)
+	}
+	for _, key := range []string{
+		"conditional_access_policy_count",
+		"directory_role_definition_count",
+		"directory_role_assignment_count",
+		"privileged_principal_count",
+		"principal_group_membership_count",
+		"principal_group_resolution_count",
+		"unresolved_group_resolution_count",
+		"missing_group_resolution_count",
+		"completeness_status",
+		"limitations",
+	} {
+		if _, exists := root[key]; !exists {
+			t.Fatalf("expected key %q in collection_completeness details on %s, got %#v", key, finding.RuleID, root)
+		}
 	}
 }

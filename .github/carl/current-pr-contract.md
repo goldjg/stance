@@ -1,37 +1,32 @@
 # Current PR contract
 
-## PR focus
-Add direct group membership resolution status for privileged principals to improve cautious privileged-principal Conditional Access evidence quality.
+  ## PR focus
+  Add collection completeness/readiness signalling for current Microsoft 365 Entra checks.
 
-## Included
-- Add direct principal group resolution status fact model (`principal_group_resolutions`) under Microsoft 365 provider facts.
-- Record per-principal direct group resolution success/failure during privileged principal direct group collection.
-- Reuse existing Conditional Access policy group targeting fields and correlate include/exclude group targets using direct membership evidence without overclaiming when resolution failed/unknown.
-- Enhance privileged CA machine-readable details (`ENTRA-CA-006/007/008`) with deterministic direct group resolution context:
-  - `group_resolution_status`
-  - `direct_group_count`
-  - `group_resolution_error_kind` (when failed)
-  - `group_resolution_error_message` (when failed)
-  - existing `direct_group_ids` and `direct_group_display_names`
-- Keep check/report compatibility across JSON, Markdown, HTML, JUnit, and SARIF outputs.
-- Add/adjust tests for fact defaults, collector mapping/continuation, direct-group evidence correlation, and output compatibility.
-- Update docs and governance artifacts:
-  - `README.md`
-  - `docs/maester-parity.md`
-  - `.github/carl/memory.md`
-  - `.github/carl/current-pr-contract.md`
+  ## Included
+  - Add Microsoft 365 completeness summary helper under `internal/provider/microsoft365/eval` derived from existing fact families only.
+  - Add informational check `ENTRA-COLLECT-001` for collection completeness/readiness evidence.
+  - Add machine-readable finding details under `details.collection_completeness`.
+  - Keep check/report compatibility across JSON, Markdown, HTML, JUnit, and SARIF outputs.
+  - Add/adjust tests for completeness status derivation, catalog/listing presence, JSON details payload, and output compatibility.
+  - Update docs and governance artifacts:
+    - `README.md`
+    - `docs/maester-parity.md`
+    - `.github/carl/memory.md`
+    - `.github/carl/current-pr-contract.md`
 
-## Excluded
-- New checks unless strictly required for this direct-group evidence slice.
-- Full Markdown/HTML per-principal evidence tables.
-- SARIF source locations or full tenant evidence dumps.
-- Graph transitive/nested group expansion.
-- Dynamic group rule evaluation.
-- Emergency-access/break-glass pass/fail logic.
-- Full effective Conditional Access simulation or What-If parity.
-- Non-Entra workload expansion (Exchange, SharePoint, Teams, Defender, Purview).
-- Remediation/write actions.
-- New providers.
+  ## Excluded
+  - New Graph collectors or Graph endpoints.
+  - Full Markdown/HTML per-principal evidence tables or tenant evidence dumps.
+  - SARIF source locations or full tenant evidence dumps.
+  - Nested/transitive group expansion.
+  - Dynamic group rule evaluation.
+  - Emergency-access/break-glass pass/fail logic.
+  - Full effective Conditional Access simulation or What-If parity.
+  - Scoring system.
+  - Non-Entra workload expansion (Exchange, SharePoint, Teams, Defender, Purview).
+  - Remediation/write actions.
+  - New providers.
 - PowerShell/runtime/module integrations, shell-outs, or Microsoft SDK dependencies.
 
 ## Guardrails

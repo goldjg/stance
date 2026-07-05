@@ -11,7 +11,7 @@ import (
 )
 
 func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
-	findings := make([]coreeval.Finding, 0, 10)
+	findings := make([]coreeval.Finding, 0, 11)
 
 	disabled := make([]string, 0)
 	reportOnly := make([]string, 0)
@@ -114,6 +114,17 @@ func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
 		Summary:      summarizePrivilegedUnknownCoverage(privilegedCAEvidence),
 		MatchedItems: matchedUnknownCoveragePrincipals(privilegedCAEvidence),
 		Details:      privilegedCAFindingDetails,
+	})
+
+	collectionCompleteness := DeriveCollectionCompletenessSummary(bundle)
+	findings = append(findings, coreeval.Finding{
+		RuleID:       "ENTRA-COLLECT-001",
+		Title:        "Microsoft 365 collection completeness evidence is observed",
+		Severity:     corerules.SeverityLow,
+		Status:       coreeval.StatusInfo,
+		Summary:      summarizeCollectionCompleteness(collectionCompleteness),
+		MatchedItems: matchedCollectionCompletenessGaps(collectionCompleteness),
+		Details:      collectionCompletenessDetails(collectionCompleteness),
 	})
 
 	roleAssignments := bundle.DirectoryRoleAssignments

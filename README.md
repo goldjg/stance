@@ -220,6 +220,7 @@ Additional implemented checks:
 - `ENTRA-CA-006` privileged principal Conditional Access coverage evidence observed (informational visibility, not complete coverage proof).
 - `ENTRA-CA-007` privileged principal direct/possible Conditional Access exclusion evidence observed (informational visibility, not emergency-access pass/fail).
 - `ENTRA-CA-008` privileged principal Conditional Access coverage unknown from current facts (informational follow-up signal).
+- `ENTRA-COLLECT-001` Microsoft 365 collection completeness evidence observed for current implemented Entra checks (informational readiness signal; not a score).
 - `ENTRA-ROLE-001` privileged directory role assignments observed (informational visibility summary).
 - `ENTRA-ROLE-002` privileged role assignments with incomplete principal details observed (informational caution).
 
@@ -227,6 +228,7 @@ STANCE now correlates privileged role-assignment facts, direct privileged-princi
 Privileged-principal evidence now includes direct-group resolution status to avoid overclaiming when group lookup fails or resolution status is missing.
 
 Durable result JSON now also carries optional structured finding details for privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) under `details.privileged_ca_evidence` for machine-readable handoff. Markdown, HTML, JUnit, and SARIF outputs remain summary-oriented and do not dump full per-principal evidence payloads.
+Durable result JSON also carries optional collection completeness details for `ENTRA-COLLECT-001` under `details.collection_completeness` to surface evidence-readiness gaps in one place.
 
 Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, direct group identifiers/names, direct-group resolution status, and observed policy identifiers).
 
@@ -237,6 +239,8 @@ Current limitations:
 - Emergency-access/break-glass account designation is not implemented.
 - Full effective Conditional Access simulation (What-If style) is not implemented.
 - Report-only policies are not treated as enforcement evidence.
+- Collection completeness is evidence/readiness signalling only; it is not a tenant score or pass/fail safety claim.
+- Partial collection evidence can result from failed direct group resolution, missing direct group resolution records, missing Conditional Access policy facts, or role assignments without derived privileged principals.
 
 ## Microsoft Graph permissions (current)
 
