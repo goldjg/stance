@@ -1,0 +1,29 @@
+version: 1
+project:
+  name: STANCE
+  acronym: Secure Tenant And Configuration Evaluator
+runtime:
+  language: go
+  single_binary: true
+  powershell_runtime_allowed: false
+  shell_out_to_pwsh_allowed: false
+  shell_out_to_graph_cli_allowed: false
+api_policy:
+  direct_rest_required: true
+  preferred_sources:
+    - microsoft-graph-rest
+    - azure-resource-manager-rest
+security:
+  read_only_v0_1: true
+  oidc_wif_first: true
+  client_secret_fallback_only: true
+architecture:
+  collector_first: true
+  collect_once_evaluate_many: true
+  declarative_checks_preferred: true
+clean_room:
+  maester_reference_only: true
+  copy_maester_code_or_text_allowed: false
+delivery:
+  small_reviewable_prs: true
+  record_api_uncertainty_as_research: true

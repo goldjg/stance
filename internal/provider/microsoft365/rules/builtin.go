@@ -1,0 +1,63 @@
+package rules
+
+import corerules "github.com/goldjg/stance/internal/core/rules"
+
+func BuiltinConditionalAccessRules() []corerules.Rule {
+	return []corerules.Rule{
+		{
+			ID:                  "ENTRA-CA-001",
+			Title:               "Disabled Conditional Access policies are identified",
+			Severity:            corerules.SeverityMedium,
+			Category:            "conditional-access",
+			Service:             "entra",
+			RequiredPermissions: []string{"Policy.Read.All"},
+			DataRequirements:    []string{"conditional_access_policies"},
+			Remediation:         "Review disabled policies and either remove stale entries or re-enable required controls.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/conditional-access/overview"},
+		},
+		{
+			ID:                  "ENTRA-CA-002",
+			Title:               "Report-only Conditional Access policies are identified",
+			Severity:            corerules.SeverityLow,
+			Category:            "conditional-access",
+			Service:             "entra",
+			RequiredPermissions: []string{"Policy.Read.All"},
+			DataRequirements:    []string{"conditional_access_policies"},
+			Remediation:         "Review report-only policies and promote validated controls to enabled state.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-report-only"},
+		},
+		{
+			ID:                  "ENTRA-CA-003",
+			Title:               "Conditional Access policies targeting privileged roles are identified",
+			Severity:            corerules.SeverityMedium,
+			Category:            "conditional-access",
+			Service:             "entra",
+			RequiredPermissions: []string{"Policy.Read.All"},
+			DataRequirements:    []string{"conditional_access_policies"},
+			Remediation:         "Ensure privileged-role-targeted policies are intentional, reviewed, and aligned to access strategy.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-users-groups"},
+		},
+		{
+			ID:                  "ENTRA-CA-004",
+			Title:               "Privileged-role Conditional Access policies enforce MFA or authentication strength",
+			Severity:            corerules.SeverityHigh,
+			Category:            "conditional-access",
+			Service:             "entra",
+			RequiredPermissions: []string{"Policy.Read.All"},
+			DataRequirements:    []string{"conditional_access_policies"},
+			Remediation:         "Add MFA grant control or authentication strength requirement to privileged-role-targeted policies.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-mfa-strength"},
+		},
+		{
+			ID:                  "ENTRA-CA-005",
+			Title:               "Privileged-role Conditional Access policies have user exclusions configured (informational)",
+			Severity:            corerules.SeverityLow,
+			Category:            "conditional-access",
+			Service:             "entra",
+			RequiredPermissions: []string{"Policy.Read.All"},
+			DataRequirements:    []string{"conditional_access_policies"},
+			Remediation:         "Review user exclusions and validate emergency-access intent out of band. Excluded users alone do not prove break-glass coverage.",
+			References:          []string{"https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access"},
+		},
+	}
+}

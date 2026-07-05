@@ -1,0 +1,6 @@
+# STANCE check summary
+
+| Rule ID | Severity | Status | Summary |
+| --- | --- | --- | --- |
+| ENTRA-CA-001 | medium | fail | Detected disabled policies. |
+| ENTRA-CA-002 | low | pass | No report-only policies detected. |
