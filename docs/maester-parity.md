@@ -11,7 +11,7 @@ Parity in this document means **equivalent operator outcomes**, not copied imple
 - Runtime is 100% Go and provider-oriented.
 - Core architecture is provider-neutral under `internal/core/*`.
 - Microsoft 365 implementation lives under `internal/provider/microsoft365/*`.
-- Current coverage is Entra Conditional Access plus Entra directory role definition/assignment collection with collect-once/evaluate-locally behavior.
+- Current coverage is Entra Conditional Access plus Entra directory role definition/assignment collection and direct privileged-principal group membership collection with collect-once/evaluate-locally behavior.
 - Existing check outputs are JSON, Markdown, JUnit, HTML, and SARIF.
 - Durable result JSON includes machine-readable structured finding details for privileged-principal Conditional Access evidence (`ENTRA-CA-006/007/008`) to improve CI/system handoff.
 
@@ -77,14 +77,14 @@ This matrix uses only these status values:
 | Workload identity federation | Secure non-secret execution paths | WIF-first auth shape plus action-native GitHub OIDC assertion acquisition are in place | Keep WIF-first and strengthen CI packaging | partial | Entra federated credential trust setup remains external and operator-managed |
 | Continuous monitoring / drift detection | Scheduled monitoring and change awareness | Point-in-time execution only | Scheduled runs, history, and drift signals | not-started | P5 focus |
 | Admin-facing remediation guidance | Rich remediation-oriented guidance | Minimal check metadata and summaries, including cautious role-assignment evidence signals | Expand guidance while keeping clean-room wording | partial | Expand gradually with suite growth |
-| Conditional Access What-If style analysis | What-if planning style workflows | Partial evidence correlation only; no full effective-policy simulation | Add analysis features for CA scenario outcomes | partial | Current privileged-principal CA evidence remains cautious and non-authoritative; full What-If parity is future work |
+| Conditional Access What-If style analysis | What-if planning style workflows | Partial evidence correlation only; direct privileged-principal group membership correlation is implemented, but no full effective-policy simulation | Add analysis features for CA scenario outcomes | partial | Current privileged-principal CA evidence remains cautious and non-authoritative; full What-If parity is future work |
 | Test install/update lifecycle | Install/update experience for tests/content | Not available | Introduce controlled rule pack lifecycle | deferred | Revisit after core custom-pack capability stabilizes |
 
 ## Remaining priority gaps
 
 - Broader Microsoft 365 checks and suites beyond current coverage.
 - Privileged account and emergency-access analysis remains partial/future; current CA and role checks are intentionally evidence-first and do not implement break-glass pass/fail decisions.
-- Group expansion, nested/dynamic group evaluation, and full Conditional Access What-If style simulation remain future work.
+- Nested/transitive group expansion, dynamic group evaluation, and full Conditional Access What-If style simulation remain future work.
 - Full effective Conditional Access simulation and emergency-access assessment remain future work despite improved machine-readable evidence handoff.
 - Richer baseline/compliance mapping and configuration controls.
 - Drift history and longitudinal comparison workflows.

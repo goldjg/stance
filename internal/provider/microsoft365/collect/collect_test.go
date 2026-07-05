@@ -45,7 +45,7 @@ func TestMapCAPolicyFromFixture(t *testing.T) {
 }
 
 func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
-	var hitOrg, hitCA, hitRoleDefs, hitRoleAssignments, hitPrincipal bool
+	var hitOrg, hitCA, hitRoleDefs, hitRoleAssignments, hitPrincipal, hitPrincipalGroups bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/organization":
@@ -61,8 +61,19 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 			hitRoleAssignments = true
 			_, _ = w.Write([]byte(`{"value":[{"id":"assign-1","roleDefinitionId":"role-1","principalId":"principal-1","principalType":"user"}]}`))
 		case "/v1.0/directoryObjects/principal-1":
-			hitPrincipal = true
-			_, _ = w.Write([]byte(`{"id":"principal-1","@odata.type":"#microsoft.graph.user","displayName":"Alice Admin","userPrincipalName":"alice@contoso.com"}`))
+			if r.URL.RawQuery == "$select=id,displayName,userPrincipalName" {
+				hitPrincipal = true
+				_, _ = w.Write([]byte(`{"id":"principal-1","@odata.type":"#microsoft.graph.user","displayName":"Alice Admin","userPrincipalName":"alice@contoso.com"}`))
+				return
+			}
+			t.Fatalf("unexpected query for principal endpoint: %s", r.URL.RawQuery)
+		case "/v1.0/directoryObjects/principal-1/memberOf":
+			if r.URL.RawQuery == "$select=id,displayName" {
+				hitPrincipalGroups = true
+				_, _ = w.Write([]byte(`{"value":[{"id":"group-1","@odata.type":"#microsoft.graph.group","displayName":"Privileged Admins"}]}`))
+				return
+			}
+			t.Fatalf("unexpected query for principal group endpoint: %s", r.URL.RawQuery)
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -79,14 +90,15 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunDefault returned error: %v", err)
 	}
-	if !hitOrg || !hitCA || !hitRoleDefs || !hitRoleAssignments || !hitPrincipal {
+	if !hitOrg || !hitCA || !hitRoleDefs || !hitRoleAssignments || !hitPrincipal || !hitPrincipalGroups {
 		t.Fatalf(
-			"expected org/ca/role endpoints to be called, hitOrg=%v hitCA=%v hitRoleDefs=%v hitRoleAssignments=%v hitPrincipal=%v",
+			"expected org/ca/role/group endpoints to be called, hitOrg=%v hitCA=%v hitRoleDefs=%v hitRoleAssignments=%v hitPrincipal=%v hitPrincipalGroups=%v",
 			hitOrg,
 			hitCA,
 			hitRoleDefs,
 			hitRoleAssignments,
 			hitPrincipal,
+			hitPrincipalGroups,
 		)
 	}
 	if len(bundle.Organization) != 1 {
@@ -103,5 +115,8 @@ func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 	}
 	if len(bundle.PrivilegedPrincipals) != 1 {
 		t.Fatalf("expected 1 privileged principal, got %d", len(bundle.PrivilegedPrincipals))
+	}
+	if len(bundle.PrincipalGroupMemberships) != 1 {
+		t.Fatalf("expected 1 principal group membership, got %d", len(bundle.PrincipalGroupMemberships))
 	}
 }

@@ -17,6 +17,9 @@ func TestForSuite(t *testing.T) {
 	if !containsPermission(perms, "RoleManagement.Read.Directory") {
 		t.Fatalf("expected RoleManagement.Read.Directory in suite permissions, got %s", joined)
 	}
+	if !containsPermission(perms, "Directory.Read.All") {
+		t.Fatalf("expected Directory.Read.All in suite permissions, got %s", joined)
+	}
 }
 
 func TestForChecks(t *testing.T) {
@@ -44,8 +47,8 @@ func TestForChecksPrivilegedCAEvidencePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ForChecks returned error: %v", err)
 	}
-	if !containsPermission(perms, "Policy.Read.All") || !containsPermission(perms, "RoleManagement.Read.Directory") {
-		t.Fatalf("expected Policy.Read.All and RoleManagement.Read.Directory, got %v", perms)
+	if !containsPermission(perms, "Policy.Read.All") || !containsPermission(perms, "RoleManagement.Read.Directory") || !containsPermission(perms, "Directory.Read.All") {
+		t.Fatalf("expected Policy.Read.All, RoleManagement.Read.Directory, and Directory.Read.All, got %v", perms)
 	}
 }
 

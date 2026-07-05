@@ -13,6 +13,7 @@ var suitePermissions = map[string][]string{
 		"Organization.Read.All",
 		"Policy.Read.All",
 		"RoleManagement.Read.Directory",
+		"Directory.Read.All",
 	},
 }
 

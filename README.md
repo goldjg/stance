@@ -22,7 +22,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 ## v0.1 scope
 
 - Provider support: `microsoft365` only for now.
-- Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection with cautious privileged-principal CA evidence correlation.
+- Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection and direct privileged-principal group membership collection for cautious privileged-principal CA evidence correlation.
 - Read-only posture assessment.
 - Current check output formats: durable result JSON, Markdown summary, JUnit XML, HTML, SARIF.
 - Current discovery commands: `providers`, `suites`, `checks`.
@@ -222,16 +222,16 @@ Additional implemented checks:
 - `ENTRA-ROLE-001` privileged directory role assignments observed (informational visibility summary).
 - `ENTRA-ROLE-002` privileged role assignments with incomplete principal details observed (informational caution).
 
-STANCE now correlates privileged role-assignment facts with Conditional Access policy facts to produce cautious privileged-principal evidence. This evidence is intentionally not a full effective-policy proof.
+STANCE now correlates privileged role-assignment facts, direct privileged-principal group memberships, and Conditional Access policy facts to produce cautious privileged-principal evidence. This evidence is intentionally not a full effective-policy proof.
 
 Durable result JSON now also carries optional structured finding details for privileged-principal CA evidence findings (`ENTRA-CA-006/007/008`) under `details.privileged_ca_evidence` for machine-readable handoff. Markdown, HTML, JUnit, and SARIF outputs remain summary-oriented and do not dump full per-principal evidence payloads.
 
-Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, and observed policy identifiers).
+Result JSON artifacts can include tenant posture and principal metadata (for example principal identifiers, display names, role names, direct group identifiers/names, and observed policy identifiers).
 
 Current limitations:
 
-- Group membership expansion is not implemented.
-- Nested and dynamic group evaluation is not implemented.
+- Nested and transitive group expansion is not implemented.
+- Dynamic group rule evaluation is not implemented.
 - Emergency-access/break-glass account designation is not implemented.
 - Full effective Conditional Access simulation (What-If style) is not implemented.
 - Report-only policies are not treated as enforcement evidence.
@@ -240,4 +240,4 @@ Current limitations:
 
 - Conditional Access collection: `Organization.Read.All`, `Policy.Read.All`
 - Directory role definition/assignment collection: `RoleManagement.Read.Directory`
-- Principal detail enrichment: `Directory.Read.All` may be required for principal detail resolution in some tenants
+- Principal detail and direct group membership enrichment: `Directory.Read.All` is required or may be required for principal/group detail resolution in some tenants

@@ -1,16 +1,17 @@
 # Current PR contract
 
 ## PR focus
-Add structured evidence details to durable result JSON for cautious privileged principal Conditional Access evidence findings.
+Add direct privileged-principal group membership facts and use them to improve cautious privileged-principal Conditional Access evidence.
 
 ## Included
-- Add optional provider-neutral structured finding details field in core result plumbing.
-- Populate privileged CA machine-readable evidence payload in finding details for:
-  - `ENTRA-CA-006`
-  - `ENTRA-CA-007`
-  - `ENTRA-CA-008`
-- Keep `stance check --format json` and `stance report --results ... --format json` preserving finding details.
-- Add/adjust tests for details serialization/round-trip and report compatibility.
+- Add direct principal group membership fact model (`principal_group_memberships`) under Microsoft 365 provider facts.
+- Add direct Graph collection for privileged principals using `directoryObjects/{id}/memberOf` (direct membership only).
+- Reuse existing Conditional Access policy group targeting fields and correlate include/exclude group targets using direct membership evidence.
+- Enhance privileged CA machine-readable details (`ENTRA-CA-006/007/008`) with deterministic direct group context:
+  - `direct_group_ids`
+  - `direct_group_display_names`
+- Keep check/report compatibility across JSON, Markdown, HTML, JUnit, and SARIF outputs.
+- Add/adjust tests for fact defaults, collector mapping/continuation, direct-group evidence correlation, and output compatibility.
 - Update docs and governance artifacts:
   - `README.md`
   - `docs/maester-parity.md`
@@ -18,11 +19,11 @@ Add structured evidence details to durable result JSON for cautious privileged p
   - `.github/carl/current-pr-contract.md`
 
 ## Excluded
-- New collectors or Graph endpoint additions.
-- New checks unless strictly required for result/detail plumbing.
+- New checks unless strictly required for this direct-group evidence slice.
 - Full Markdown/HTML per-principal evidence tables.
 - SARIF source locations or full tenant evidence dumps.
-- Graph group expansion (including nested/dynamic groups).
+- Graph transitive/nested group expansion.
+- Dynamic group rule evaluation.
 - Emergency-access/break-glass pass/fail logic.
 - Full effective Conditional Access simulation or What-If parity.
 - Non-Entra workload expansion (Exchange, SharePoint, Teams, Defender, Purview).

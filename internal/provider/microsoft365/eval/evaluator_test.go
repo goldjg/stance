@@ -197,6 +197,59 @@ func TestEvaluateDefaultPrivilegedCAEvidenceChecksStayCautious(t *testing.T) {
 	assertPrivilegedCAEvidenceDetails(t, unknown)
 }
 
+func TestEvaluateDefaultPrivilegedCAEvidenceDetailsIncludeSortedDirectGroups(t *testing.T) {
+	bundle := facts.Bundle{
+		CAPolicies: []facts.CAPolicyFact{
+			{
+				ID:              "policy-1",
+				DisplayName:     "Privileged group MFA",
+				State:           "enabled",
+				IncludedGroups:  []string{"group-a"},
+				BuiltInControls: []string{"mfa"},
+			},
+		},
+		PrivilegedPrincipals: []facts.PrivilegedPrincipal{
+			{
+				PrincipalID: "principal-1",
+				DisplayName: "Alice",
+			},
+		},
+		PrincipalGroupMemberships: []facts.PrincipalGroupMembership{
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				GroupID:          "group-z",
+				GroupDisplayName: "Group Z",
+				GroupType:        "group",
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+			{
+				PrincipalID:      "principal-1",
+				PrincipalType:    "user",
+				GroupID:          "group-a",
+				GroupDisplayName: "Group A",
+				GroupType:        "group",
+				Source:           "graph:/v1.0/directoryObjects/principal-1/memberOf",
+			},
+		},
+	}
+	result := EvaluateDefault(bundle)
+	coverage := findingByRuleID(result, "ENTRA-CA-006")
+	root := coverage.Details["privileged_ca_evidence"].(map[string]any)
+	principals := root["principals"].([]map[string]any)
+	if len(principals) != 1 {
+		t.Fatalf("expected one principal in details, got %#v", principals)
+	}
+	groupIDs := principals[0]["direct_group_ids"].([]string)
+	if strings.Join(groupIDs, ",") != "group-a,group-z" {
+		t.Fatalf("expected sorted direct_group_ids, got %#v", groupIDs)
+	}
+	groupNames := principals[0]["direct_group_display_names"].([]string)
+	if strings.Join(groupNames, ",") != "Group A,Group Z" {
+		t.Fatalf("expected sorted direct_group_display_names, got %#v", groupNames)
+	}
+}
+
 func findingByRuleID(result coreeval.Result, ruleID string) coreeval.Finding {
 	for _, finding := range result.Findings {
 		if finding.RuleID == ruleID {
