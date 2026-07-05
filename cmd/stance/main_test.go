@@ -128,6 +128,33 @@ func TestRunCheckSARIF(t *testing.T) {
 	}
 }
 
+func TestRunCheckWithRoleFactsKeepsReportOutputsWorking(t *testing.T) {
+	tmpDir := t.TempDir()
+	factsPath := filepath.Join(tmpDir, "facts.json")
+	factsPayload := `{
+  "directory_role_definitions":[{"id":"role-1","display_name":"Global Administrator"}],
+  "directory_role_assignments":[{"id":"assign-1","role_definition_id":"role-1","role_display_name":"Global Administrator","principal_id":"principal-1","principal_display_name":"Alice","source":"graph:/v1.0/roleManagement/directory/roleAssignments"}],
+  "privileged_principals":[{"principal_id":"principal-1","display_name":"Alice","role_definition_ids":["role-1"],"role_display_names":["Global Administrator"]}]
+}`
+	if err := os.WriteFile(factsPath, []byte(factsPayload), 0o600); err != nil {
+		t.Fatalf("write facts: %v", err)
+	}
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	code := run([]string{"check", "--facts", factsPath, "--format", "sarif"}, &out, &err)
+	if code != 0 {
+		t.Fatalf("expected success; code=%d stderr=%q", code, err.String())
+	}
+	if !strings.Contains(out.String(), `"ruleId": "ENTRA-ROLE-001"`) || !strings.Contains(out.String(), `"ruleId": "ENTRA-ROLE-002"`) {
+		t.Fatalf("expected role findings in sarif output: %q", out.String())
+	}
+	if strings.Contains(out.String(), `"locations"`) {
+		t.Fatalf("sarif output should not include synthetic locations: %q", out.String())
+	}
+}
+
 func TestRunReportRequiresResults(t *testing.T) {
 	var out bytes.Buffer
 	var err bytes.Buffer
@@ -266,6 +293,12 @@ func TestRunPermissionsSuite(t *testing.T) {
 	if !strings.Contains(out.String(), "Policy.Read.All") {
 		t.Fatalf("unexpected permissions output: %q", out.String())
 	}
+	if !strings.Contains(out.String(), "RoleManagement.Read.Directory") {
+		t.Fatalf("expected role-management permission in output: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "Directory.Read.All may be required for principal detail resolution") {
+		t.Fatalf("expected principal-detail guidance note in output: %q", out.String())
+	}
 }
 
 func TestRunPermissionsSuiteWithProvider(t *testing.T) {
@@ -278,6 +311,9 @@ func TestRunPermissionsSuiteWithProvider(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "Policy.Read.All") {
 		t.Fatalf("unexpected permissions output: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "RoleManagement.Read.Directory") {
+		t.Fatalf("expected role-management permission in output: %q", out.String())
 	}
 }
 
@@ -356,6 +392,9 @@ func TestRunChecksDefaultText(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "ENTRA-CA-001") {
 		t.Fatalf("unexpected checks output: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "ENTRA-ROLE-001") {
+		t.Fatalf("expected role checks output: %q", out.String())
 	}
 }
 

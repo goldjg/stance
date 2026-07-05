@@ -43,7 +43,6 @@
 - `stance report` is implemented as an offline result conversion command from durable STANCE result JSON.
 - `stance check --format json` emits the durable STANCE result document as handoff format to `stance report`.
 - SARIF output (`--format sarif`) is implemented for both `stance check` and `stance report`.
-- This PR intentionally adds no new Microsoft API collectors and no new posture checks.
 - STANCE release packaging uses GoReleaser v2 with project-specific release/distribution configuration.
 - Tagged `v*` releases publish cross-platform STANCE CLI artefacts (linux/darwin/windows amd64, plus linux/darwin arm64).
 - Linux native packages (`deb`, `rpm`, `apk`) are generated via GoReleaser nFPM config.
@@ -51,7 +50,6 @@
 - WinGet submission is optional and token-gated via release workflow (`WINGETCREATE_TOKEN`) using package ID `goldjg.STANCE`.
 - macOS release artefacts are codesigned when Apple signing secrets are configured.
 - Notarisation is not implemented yet; darwin artefacts are signed but not notarised.
-- This release packaging PR adds no new Microsoft collectors, no new posture checks, and no new providers.
 - Initial STANCE GitHub Action wrapper exists as a repository-local composite action (`action.yml`) that builds STANCE from checked-out source.
 - The GitHub Action supports facts-only mode via `facts-path` and can run evaluation/report generation without Microsoft authentication.
 - The GitHub Action supports `auth-mode: env` for explicit caller-provided Microsoft auth variables.
@@ -60,9 +58,12 @@
 - Entra federated identity credential setup remains external to STANCE and must not be faked.
 - SARIF upload is supported by generating `stance.sarif` and uploading through `github/codeql-action/upload-sarif`.
 - Facts-only mode remains auth-free.
-- This GitHub Action OIDC ergonomics PR adds no new Microsoft collectors, no new posture checks, and no new providers.
 - The GitHub Action supports `stance-version: local`, `latest`, and explicit `vX.Y.Z` tags.
 - Released-binary action mode downloads GitHub Release archives and verifies SHA-256 against release `checksums.txt` before extraction/execution.
 - Pinned explicit versions are recommended for production workflows; `latest` is convenience mode and less deterministic.
 - Auth modes `env` and `github-oidc` remain supported after install-mode expansion.
-- The released-binary action install PR adds no new Microsoft collectors, no new posture checks, and no new providers.
+- Microsoft 365 collector scope now includes Entra directory role definitions and role assignments via direct Graph API.
+- Privileged principals are derived from Entra role assignments as facts for future coverage analysis.
+- ENTRA role visibility checks are informational/cautious and do not claim emergency-access or break-glass pass/fail outcomes.
+- `RoleManagement.Read.Directory` is required for directory role assignment collection; `Directory.Read.All` may be required for principal detail resolution.
+- This collector expansion adds no PowerShell/runtime/module dependencies, no shell-outs, and no Microsoft SDK dependency.

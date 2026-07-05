@@ -1,38 +1,31 @@
 # Current PR contract
 
 ## PR focus
-Add released-binary install mode support to the STANCE GitHub Action.
+Expand the Microsoft 365 Entra directory role collector foundation.
 
 ## Included
-- Update root `action.yml` install behavior for:
-  - `stance-version: local` (unchanged local build behavior)
-  - `stance-version: latest` (latest release resolution + install)
-  - `stance-version: vX.Y.Z` (pinned release install)
-- Enforce checksum verification for released-binary mode:
-  - download selected archive + `checksums.txt`
-  - require archive entry in checksums
-  - fail on missing or mismatched SHA-256
-- Preserve action auth and runtime behavior:
-  - facts-only remains auth-free
-  - `auth-mode: env` remains supported
-  - `auth-mode: github-oidc` remains supported
-  - collect/check/report flow remains unchanged after binary install
-- Update docs/examples:
-  - `docs/github-action.md`
-  - `docs/examples/github-actions/stance-microsoft365.yml`
-  - `docs/examples/github-actions/stance-facts-only.yml`
-- Update `README.md` GitHub Action section and docs link/guidance.
-- Update `docs/maester-parity.md` CI/CD and action-integration progress wording.
-- Update `.github/carl/memory.md` with durable install/auth truths.
-- Keep this contract aligned with final scope.
+- Add Microsoft 365 role definition/assignment fact models under `internal/provider/microsoft365/facts`.
+- Add direct Graph collection for Entra directory role definitions and assignments.
+- Derive privileged principal facts from role assignments.
+- Integrate role facts into the Microsoft 365 fact bundle and default collection flow.
+- Add cautious role visibility checks:
+  - `ENTRA-ROLE-001`
+  - `ENTRA-ROLE-002`
+- Update check catalog/suite listing and permissions output for role collection scope.
+- Update docs and governance artifacts:
+  - `README.md`
+  - `docs/maester-parity.md`
+  - `.github/carl/memory.md`
+  - `.github/carl/current-pr-contract.md`
+- Add/update tests for collector mapping, derivation, evaluator behavior, catalog/permissions, CLI output, and report compatibility.
 
 ## Excluded
-- New Microsoft API collectors.
-- New posture checks.
+- Emergency-access/break-glass pass/fail logic.
+- Full Conditional Access coverage analysis for privileged principals.
+- Non-Entra workload expansion (Exchange, SharePoint, Teams, Defender, Purview).
+- Remediation/write actions.
 - New providers.
-- Entra app/service principal provisioning and federated credential creation.
-- `fail-on-findings` behavior implementation.
-- Release workflow/pipeline implementation changes (except strictly necessary naming docs alignment).
+- PowerShell/runtime/module integrations, shell-outs, or Microsoft SDK dependencies.
 
 ## Guardrails
 - Keep STANCE runtime 100% Go.
@@ -46,4 +39,4 @@ Add released-binary install mode support to the STANCE GitHub Action.
 - `gofmt -l .` clean.
 - `go test ./...`.
 - `go vet ./...`.
-- Manual review of `action.yml` install/auth behavior and docs/example correctness.
+- Manual review that role checks remain cautious and do not overclaim emergency-access/CA outcomes.

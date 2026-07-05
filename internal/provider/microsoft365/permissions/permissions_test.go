@@ -10,6 +10,13 @@ func TestForSuite(t *testing.T) {
 	if len(perms) == 0 {
 		t.Fatalf("expected permissions for entra suite")
 	}
+	joined := ""
+	for _, p := range perms {
+		joined += p + ","
+	}
+	if !containsPermission(perms, "RoleManagement.Read.Directory") {
+		t.Fatalf("expected RoleManagement.Read.Directory in suite permissions, got %s", joined)
+	}
 }
 
 func TestForChecks(t *testing.T) {
@@ -20,4 +27,23 @@ func TestForChecks(t *testing.T) {
 	if len(perms) != 1 || perms[0] != "Policy.Read.All" {
 		t.Fatalf("unexpected permissions: %v", perms)
 	}
+}
+
+func TestForChecksRoleCheckPermissions(t *testing.T) {
+	perms, err := Resolver{}.ForChecks([]string{"ENTRA-ROLE-001", "ENTRA-ROLE-002"})
+	if err != nil {
+		t.Fatalf("ForChecks returned error: %v", err)
+	}
+	if len(perms) != 1 || perms[0] != "RoleManagement.Read.Directory" {
+		t.Fatalf("unexpected role-check permissions: %v", perms)
+	}
+}
+
+func containsPermission(perms []string, target string) bool {
+	for _, p := range perms {
+		if p == target {
+			return true
+		}
+	}
+	return false
 }

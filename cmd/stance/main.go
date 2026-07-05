@@ -109,7 +109,7 @@ func runExplain(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	for _, rule := range microsoft365rules.BuiltinConditionalAccessRules() {
+	for _, rule := range microsoft365rules.BuiltinRules() {
 		if rule.ID != checkID {
 			continue
 		}
@@ -166,6 +166,12 @@ func runPermissions(args []string, stdout, stderr io.Writer) int {
 	}
 	for _, p := range sorted {
 		fmt.Fprintln(stdout, p)
+	}
+	if providerName == defaultProvider {
+		fmt.Fprintln(stdout, "# Notes:")
+		fmt.Fprintln(stdout, "# - Entra Conditional Access collection requires Organization.Read.All and Policy.Read.All.")
+		fmt.Fprintln(stdout, "# - Entra directory role assignment collection additionally requires RoleManagement.Read.Directory.")
+		fmt.Fprintln(stdout, "# - Directory.Read.All may be required for principal detail resolution.")
 	}
 	return 0
 }

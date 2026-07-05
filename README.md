@@ -22,7 +22,7 @@ Roadmap: [Maester parity roadmap](docs/maester-parity.md).
 ## v0.1 scope
 
 - Provider support: `microsoft365` only for now.
-- Microsoft 365 scope: Entra ID and Conditional Access only.
+- Microsoft 365 scope: Entra ID Conditional Access plus directory role definition/assignment collection.
 - Read-only posture assessment.
 - Current check output formats: durable result JSON, Markdown summary, JUnit XML, HTML, SARIF.
 - Current discovery commands: `providers`, `suites`, `checks`.
@@ -216,3 +216,13 @@ Additional implemented checks:
 - `ENTRA-CA-003` privileged-role-targeted Conditional Access policies identified.
 - `ENTRA-CA-004` privileged-role-targeted policies missing MFA/auth strength enforcement.
 - `ENTRA-CA-005` privileged-role-targeted policies with user exclusions observed (informational only; not proof of emergency access coverage).
+- `ENTRA-ROLE-001` privileged directory role assignments observed (informational visibility summary).
+- `ENTRA-ROLE-002` privileged role assignments with incomplete principal details observed (informational caution).
+
+Directory role facts are collected to support future privileged-principal Conditional Access and emergency-access analysis. STANCE does not yet implement emergency-access/break-glass pass/fail logic.
+
+## Microsoft Graph permissions (current)
+
+- Conditional Access collection: `Organization.Read.All`, `Policy.Read.All`
+- Directory role definition/assignment collection: `RoleManagement.Read.Directory`
+- Principal detail enrichment: `Directory.Read.All` may be required for principal detail resolution in some tenants
