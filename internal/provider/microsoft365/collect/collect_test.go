@@ -3,15 +3,15 @@ package collect
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/goldjg/stance-365/internal/auth"
-	"github.com/goldjg/stance-365/internal/graph"
-	"github.com/goldjg/stance-365/internal/httpclient"
-	"net/http"
-	"net/http/httptest"
+	"github.com/goldjg/stance/internal/httpclient"
+	"github.com/goldjg/stance/internal/provider/microsoft365/auth"
+	"github.com/goldjg/stance/internal/provider/microsoft365/graph"
 )
 
 type staticTokenProvider struct{}

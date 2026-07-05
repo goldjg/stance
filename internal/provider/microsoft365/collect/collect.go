@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/goldjg/stance-365/internal/facts"
-	"github.com/goldjg/stance-365/internal/graph"
+	"github.com/goldjg/stance/internal/provider/microsoft365/facts"
+	"github.com/goldjg/stance/internal/provider/microsoft365/graph"
 )
 
 type Collector interface {

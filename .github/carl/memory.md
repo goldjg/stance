@@ -3,7 +3,7 @@
 ## Project identity
 - Name: STANCE (Secure Tenant And Configuration Evaluator).
 - Runtime: 100% Go.
-- Mission: Microsoft 365 posture evaluation through direct API collection and local rule evaluation.
+- Mission: provider-oriented posture evaluation through direct API collection and local rule evaluation.
 
 ## Durable constraints
 - Do not introduce PowerShell runtime dependencies.
@@ -15,8 +15,8 @@
 - Collector-first architecture: collect once, evaluate many.
 
 ## Clean-room rule
-- Maester is reference-only for coverage and UX direction.
-- Do not copy Maester code, test bodies, wording, remediation text, or report text.
+- Maester is reference-only for Microsoft 365 coverage and UX direction.
+- Do not copy Maester code, test bodies, wording, remediation text, or report text for the Microsoft 365 provider.
 - Record inspiration as coverage comparison only.
 
 ## Delivery rule
@@ -24,6 +24,8 @@
 - Log API uncertainty as explicit research items instead of assumptions.
 
 ## Implemented decisions
+- STANCE core remains provider-neutral; Microsoft-specific logic must stay under `internal/provider/microsoft365`.
+- Canonical internal provider name is `microsoft365`; aliases like `m365` are deferred.
 - `stance auth test` uses environment-driven configuration and fails closed on ambiguous auth material.
 - Workload identity assertion (`STANCE_CLIENT_ASSERTION` or `STANCE_FEDERATED_TOKEN_FILE`) is preferred over secrets in examples.
 - Auth error output must pass through redaction before reaching CLI stderr.

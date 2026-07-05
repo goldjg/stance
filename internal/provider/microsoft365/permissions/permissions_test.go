@@ -3,7 +3,7 @@ package permissions
 import "testing"
 
 func TestForSuite(t *testing.T) {
-	perms, err := ForSuite("entra")
+	perms, err := Resolver{}.ForSuite("entra")
 	if err != nil {
 		t.Fatalf("ForSuite returned error: %v", err)
 	}
@@ -13,7 +13,7 @@ func TestForSuite(t *testing.T) {
 }
 
 func TestForChecks(t *testing.T) {
-	perms, err := ForChecks([]string{"ENTRA-CA-001", "ENTRA-CA-002"})
+	perms, err := Resolver{}.ForChecks([]string{"ENTRA-CA-001", "ENTRA-CA-002"})
 	if err != nil {
 		t.Fatalf("ForChecks returned error: %v", err)
 	}

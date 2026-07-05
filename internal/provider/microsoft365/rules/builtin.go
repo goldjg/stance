@@ -1,11 +1,13 @@
 package rules
 
-func BuiltinConditionalAccessRules() []Rule {
-	return []Rule{
+import corerules "github.com/goldjg/stance/internal/core/rules"
+
+func BuiltinConditionalAccessRules() []corerules.Rule {
+	return []corerules.Rule{
 		{
 			ID:                  "ENTRA-CA-001",
 			Title:               "Disabled Conditional Access policies are identified",
-			Severity:            SeverityMedium,
+			Severity:            corerules.SeverityMedium,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},
@@ -16,7 +18,7 @@ func BuiltinConditionalAccessRules() []Rule {
 		{
 			ID:                  "ENTRA-CA-002",
 			Title:               "Report-only Conditional Access policies are identified",
-			Severity:            SeverityLow,
+			Severity:            corerules.SeverityLow,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},
@@ -27,7 +29,7 @@ func BuiltinConditionalAccessRules() []Rule {
 		{
 			ID:                  "ENTRA-CA-003",
 			Title:               "Conditional Access policies targeting privileged roles are identified",
-			Severity:            SeverityMedium,
+			Severity:            corerules.SeverityMedium,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},
@@ -38,7 +40,7 @@ func BuiltinConditionalAccessRules() []Rule {
 		{
 			ID:                  "ENTRA-CA-004",
 			Title:               "Privileged-role Conditional Access policies enforce MFA or authentication strength",
-			Severity:            SeverityHigh,
+			Severity:            corerules.SeverityHigh,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},
@@ -49,7 +51,7 @@ func BuiltinConditionalAccessRules() []Rule {
 		{
 			ID:                  "ENTRA-CA-005",
 			Title:               "Privileged-role Conditional Access policies have user exclusions configured (informational)",
-			Severity:            SeverityLow,
+			Severity:            corerules.SeverityLow,
 			Category:            "conditional-access",
 			Service:             "entra",
 			RequiredPermissions: []string{"Policy.Read.All"},

@@ -1,19 +1,24 @@
 # STANCE (Secure Tenant And Configuration Evaluator)
 
-STANCE is a fast, Go-native Microsoft 365 security posture evaluator.
+STANCE is a fast, Go-native security posture evaluator framework.
 
-It talks directly to Microsoft APIs, collects tenant facts once, evaluates checks locally, and emits CI-friendly reports without PowerShell runtime/module dependencies.
+STANCE uses a provider-oriented architecture: core command/report/evaluation concepts stay provider-neutral, while provider-specific collection and checks live in provider packages.
+
+The first provider is `microsoft365`. It talks directly to Microsoft APIs, collects tenant facts once, evaluates checks locally, and emits CI-friendly reports without PowerShell runtime/module dependencies.
+
+The repository is being prepared to move from `goldjg/stance-365` to `goldjg/stance`.
 
 ## Project thesis
 
 STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 
-- Maester is a functional reference for problem space and coverage ideas.
+- Maester is a functional reference for Microsoft 365 problem space and coverage ideas.
 - STANCE is clean-room implementation and must not copy Maester source code, rule text, implementation structure, or report text.
 
 ## v0.1 scope
 
-- Entra ID and Conditional Access only.
+- Provider support: `microsoft365` only for now.
+- Microsoft 365 scope: Entra ID and Conditional Access only.
 - Read-only posture assessment.
 - Current check output formats: JSON, Markdown summary, JUnit XML.
 - Planned output: SARIF.
@@ -50,6 +55,13 @@ STANCE pursues Maester-shaped outcomes, but not Maester-shaped implementation.
 
 `stance report` is planned and not yet implemented as a standalone conversion command.
 
+Provider-aware commands currently default to `--provider microsoft365`:
+
+- `stance collect --provider microsoft365`
+- `stance check --provider microsoft365`
+- `stance permissions --provider microsoft365 --suite entra`
+- `stance explain --provider microsoft365 --check ENTRA-CA-001`
+
 ## Status
 
 Repository bootstrap is in progress. The current milestone establishes:
@@ -84,7 +96,7 @@ Security posture:
 
 ## Check command (current)
 
-`stance check` evaluates collected facts with built-in rules:
+`stance check` evaluates collected facts with provider rules:
 
 - `ENTRA-CA-001` disabled Conditional Access policies detected.
 - `ENTRA-CA-002` report-only Conditional Access policies detected.

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goldjg/stance-365/internal/eval"
+	"github.com/goldjg/stance/internal/core/eval"
 )
 
 func JSON(result eval.Result) ([]byte, error) {

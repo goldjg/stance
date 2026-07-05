@@ -2,9 +2,9 @@ package permissions
 
 import (
 	"fmt"
-	"sort"
 
-	"github.com/goldjg/stance-365/internal/rules"
+	corerules "github.com/goldjg/stance/internal/core/rules"
+	providerrules "github.com/goldjg/stance/internal/provider/microsoft365/rules"
 )
 
 var suitePermissions = map[string][]string{
@@ -14,7 +14,13 @@ var suitePermissions = map[string][]string{
 	},
 }
 
-func ForSuite(suite string) ([]string, error) {
+type Resolver struct{}
+
+func (Resolver) Name() string {
+	return "microsoft365"
+}
+
+func (Resolver) ForSuite(suite string) ([]string, error) {
 	perms, ok := suitePermissions[suite]
 	if !ok {
 		return nil, fmt.Errorf("unknown suite: %s", suite)
@@ -22,13 +28,13 @@ func ForSuite(suite string) ([]string, error) {
 	return uniqueSorted(perms), nil
 }
 
-func ForChecks(checkIDs []string) ([]string, error) {
+func (Resolver) ForChecks(checkIDs []string) ([]string, error) {
 	if len(checkIDs) == 0 {
 		return nil, fmt.Errorf("at least one check id is required")
 	}
 
-	ruleByID := make(map[string]rules.Rule)
-	for _, r := range rules.BuiltinConditionalAccessRules() {
+	ruleByID := make(map[string]corerules.Rule)
+	for _, r := range providerrules.BuiltinConditionalAccessRules() {
 		ruleByID[r.ID] = r
 	}
 
@@ -53,6 +59,5 @@ func uniqueSorted(in []string) []string {
 		seen[item] = struct{}{}
 		out = append(out, item)
 	}
-	sort.Strings(out)
 	return out
 }

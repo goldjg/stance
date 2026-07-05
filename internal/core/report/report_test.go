@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goldjg/stance-365/internal/eval"
-	"github.com/goldjg/stance-365/internal/rules"
+	"github.com/goldjg/stance/internal/core/eval"
+	"github.com/goldjg/stance/internal/core/rules"
 )
 
 func sampleResult() eval.Result {

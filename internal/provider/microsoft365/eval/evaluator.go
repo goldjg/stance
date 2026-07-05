@@ -1,33 +1,13 @@
 package eval
 
 import (
-	"github.com/goldjg/stance-365/internal/facts"
-	"github.com/goldjg/stance-365/internal/rules"
+	coreeval "github.com/goldjg/stance/internal/core/eval"
+	corerules "github.com/goldjg/stance/internal/core/rules"
+	"github.com/goldjg/stance/internal/provider/microsoft365/facts"
 )
 
-type Status string
-
-const (
-	StatusPass Status = "pass"
-	StatusFail Status = "fail"
-	StatusInfo Status = "info"
-)
-
-type Finding struct {
-	RuleID       string         `json:"rule_id"`
-	Title        string         `json:"title"`
-	Severity     rules.Severity `json:"severity"`
-	Status       Status         `json:"status"`
-	Summary      string         `json:"summary"`
-	MatchedItems []string       `json:"matched_items,omitempty"`
-}
-
-type Result struct {
-	Findings []Finding `json:"findings"`
-}
-
-func EvaluateDefault(bundle facts.Bundle) Result {
-	findings := make([]Finding, 0, 5)
+func EvaluateDefault(bundle facts.Bundle) coreeval.Result {
+	findings := make([]coreeval.Finding, 0, 5)
 
 	disabled := make([]string, 0)
 	reportOnly := make([]string, 0)
@@ -53,66 +33,66 @@ func EvaluateDefault(bundle facts.Bundle) Result {
 		}
 	}
 
-	findings = append(findings, Finding{
+	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-001",
 		Title:        "Disabled Conditional Access policies are identified",
-		Severity:     rules.SeverityMedium,
+		Severity:     corerules.SeverityMedium,
 		Status:       toStatus(len(disabled) > 0),
 		Summary:      summarize("disabled policies", disabled),
 		MatchedItems: disabled,
 	})
 
-	findings = append(findings, Finding{
+	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-002",
 		Title:        "Report-only Conditional Access policies are identified",
-		Severity:     rules.SeverityLow,
+		Severity:     corerules.SeverityLow,
 		Status:       toStatus(len(reportOnly) > 0),
 		Summary:      summarize("report-only policies", reportOnly),
 		MatchedItems: reportOnly,
 	})
 
-	findings = append(findings, Finding{
+	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-003",
 		Title:        "Conditional Access policies targeting privileged roles are identified",
-		Severity:     rules.SeverityMedium,
+		Severity:     corerules.SeverityMedium,
 		Status:       toInformationalStatus(len(privilegedPolicies) > 0),
 		Summary:      summarize("privileged-role-targeted policies", privilegedPolicies),
 		MatchedItems: privilegedPolicies,
 	})
 
-	findings = append(findings, Finding{
+	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-004",
 		Title:        "Privileged-role Conditional Access policies enforce MFA or authentication strength",
-		Severity:     rules.SeverityHigh,
+		Severity:     corerules.SeverityHigh,
 		Status:       toStatus(len(privilegedWithoutMFA) > 0),
 		Summary:      summarize("privileged policies without MFA enforcement", privilegedWithoutMFA),
 		MatchedItems: privilegedWithoutMFA,
 	})
 
-	findings = append(findings, Finding{
+	findings = append(findings, coreeval.Finding{
 		RuleID:       "ENTRA-CA-005",
 		Title:        "Privileged-role Conditional Access policies have user exclusions configured (informational)",
-		Severity:     rules.SeverityLow,
-		Status:       StatusInfo,
+		Severity:     corerules.SeverityLow,
+		Status:       coreeval.StatusInfo,
 		Summary:      summarizeUserExclusions(privilegedWithUserExclusions),
 		MatchedItems: privilegedWithUserExclusions,
 	})
 
-	return Result{Findings: findings}
+	return coreeval.Result{Findings: findings}
 }
 
-func toStatus(hasMatches bool) Status {
+func toStatus(hasMatches bool) coreeval.Status {
 	if hasMatches {
-		return StatusFail
+		return coreeval.StatusFail
 	}
-	return StatusPass
+	return coreeval.StatusPass
 }
 
-func toInformationalStatus(hasMatches bool) Status {
+func toInformationalStatus(hasMatches bool) coreeval.Status {
 	if hasMatches {
-		return StatusInfo
+		return coreeval.StatusInfo
 	}
-	return StatusPass
+	return coreeval.StatusPass
 }
 
 func summarize(kind string, matches []string) string {

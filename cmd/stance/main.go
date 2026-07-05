@@ -8,22 +8,23 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
-	"github.com/goldjg/stance-365/internal/auth"
-	"github.com/goldjg/stance-365/internal/collect"
-	"github.com/goldjg/stance-365/internal/eval"
-	"github.com/goldjg/stance-365/internal/facts"
-	"github.com/goldjg/stance-365/internal/graph"
-	"github.com/goldjg/stance-365/internal/httpclient"
-	"github.com/goldjg/stance-365/internal/permissions"
-	"github.com/goldjg/stance-365/internal/report"
-	"github.com/goldjg/stance-365/internal/rules"
-	"github.com/goldjg/stance-365/internal/version"
+	corepermissions "github.com/goldjg/stance/internal/core/permissions"
+	"github.com/goldjg/stance/internal/core/report"
+	"github.com/goldjg/stance/internal/httpclient"
+	microsoft365auth "github.com/goldjg/stance/internal/provider/microsoft365/auth"
+	microsoft365collect "github.com/goldjg/stance/internal/provider/microsoft365/collect"
+	microsoft365eval "github.com/goldjg/stance/internal/provider/microsoft365/eval"
+	microsoft365facts "github.com/goldjg/stance/internal/provider/microsoft365/facts"
+	microsoft365graph "github.com/goldjg/stance/internal/provider/microsoft365/graph"
+	microsoft365permissions "github.com/goldjg/stance/internal/provider/microsoft365/permissions"
+	microsoft365rules "github.com/goldjg/stance/internal/provider/microsoft365/rules"
+	"github.com/goldjg/stance/internal/version"
 )
 
 const defaultConfigPath = "stance.yaml"
+const defaultProvider = "microsoft365"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -74,10 +75,16 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 func runExplain(args []string, stdout, stderr io.Writer) int {
+	providerName, filtered, err := parseProviderFlag(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
 	checkID := ""
-	for i := 0; i < len(args); i++ {
-		if args[i] == "--check" && i+1 < len(args) {
-			checkID = args[i+1]
+	for i := 0; i < len(filtered); i++ {
+		if filtered[i] == "--check" && i+1 < len(filtered) {
+			checkID = filtered[i+1]
 			i++
 		}
 	}
@@ -86,7 +93,12 @@ func runExplain(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	for _, rule := range rules.BuiltinConditionalAccessRules() {
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
+	}
+
+	for _, rule := range microsoft365rules.BuiltinConditionalAccessRules() {
 		if rule.ID != checkID {
 			continue
 		}
@@ -103,19 +115,25 @@ func runExplain(args []string, stdout, stderr io.Writer) int {
 }
 
 func runPermissions(args []string, stdout, stderr io.Writer) int {
+	providerName, filtered, err := parseProviderFlag(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
 	var suite string
 	checks := make([]string, 0)
 
-	for i := 0; i < len(args); i++ {
-		if i+1 >= len(args) {
+	for i := 0; i < len(filtered); i++ {
+		if i+1 >= len(filtered) {
 			break
 		}
-		switch args[i] {
+		switch filtered[i] {
 		case "--suite":
-			suite = args[i+1]
+			suite = filtered[i+1]
 			i++
 		case "--check":
-			checks = append(checks, args[i+1])
+			checks = append(checks, filtered[i+1])
 			i++
 		}
 	}
@@ -125,34 +143,16 @@ func runPermissions(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	perms := make([]string, 0)
-	if suite != "" {
-		p, err := permissions.ForSuite(suite)
-		if err != nil {
-			fmt.Fprintf(stderr, "permissions failed: %v\n", err)
-			return 1
-		}
-		perms = append(perms, p...)
-	}
-	if len(checks) > 0 {
-		p, err := permissions.ForChecks(checks)
-		if err != nil {
-			fmt.Fprintf(stderr, "permissions failed: %v\n", err)
-			return 1
-		}
-		perms = append(perms, p...)
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
 	}
 
-	// Deduplicate while preserving output stability.
-	uniq := map[string]struct{}{}
-	for _, p := range perms {
-		uniq[p] = struct{}{}
+	sorted, err := corepermissions.Aggregate(microsoft365permissions.Resolver{}, suite, checks)
+	if err != nil {
+		fmt.Fprintf(stderr, "permissions failed: %v\n", err)
+		return 1
 	}
-	sorted := make([]string, 0, len(uniq))
-	for p := range uniq {
-		sorted = append(sorted, p)
-	}
-	sort.Strings(sorted)
 	for _, p := range sorted {
 		fmt.Fprintln(stdout, p)
 	}
@@ -160,23 +160,29 @@ func runPermissions(args []string, stdout, stderr io.Writer) int {
 }
 
 func runCheck(args []string, stdout, stderr io.Writer) int {
+	providerName, filtered, err := parseProviderFlag(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
 	factsPath := ""
 	format := "json"
 	outPath := ""
 
-	for i := 0; i < len(args); i++ {
-		if i+1 >= len(args) {
+	for i := 0; i < len(filtered); i++ {
+		if i+1 >= len(filtered) {
 			break
 		}
-		switch args[i] {
+		switch filtered[i] {
 		case "--facts":
-			factsPath = args[i+1]
+			factsPath = filtered[i+1]
 			i++
 		case "--format":
-			format = args[i+1]
+			format = filtered[i+1]
 			i++
 		case "--out":
-			outPath = args[i+1]
+			outPath = filtered[i+1]
 			i++
 		}
 	}
@@ -192,13 +198,18 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	var bundle facts.Bundle
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
+	}
+
+	var bundle microsoft365facts.Bundle
 	if err := json.Unmarshal(raw, &bundle); err != nil {
 		fmt.Fprintf(stderr, "check failed to parse facts: %v\n", err)
 		return 1
 	}
 
-	result := eval.EvaluateDefault(bundle)
+	result := microsoft365eval.EvaluateDefault(bundle)
 	var payload []byte
 	switch format {
 	case "json":
@@ -233,27 +244,41 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 }
 
 func runCollect(args []string, stdout, stderr io.Writer) int {
-	outPath := ""
-	if len(args) >= 2 && args[0] == "--out" {
-		outPath = args[1]
-	}
-
-	cfg, err := auth.ConfigFromEnv()
+	providerName, filtered, err := parseProviderFlag(args)
 	if err != nil {
-		fmt.Fprintf(stderr, "collect auth configuration error: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	provider, err := auth.NewTokenProvider(cfg)
+
+	outPath := ""
+	for i := 0; i < len(filtered); i++ {
+		if filtered[i] == "--out" && i+1 < len(filtered) {
+			outPath = filtered[i+1]
+			i++
+		}
+	}
+
+	if providerName != defaultProvider {
+		fmt.Fprintf(stderr, "unsupported provider: %s\n", providerName)
+		return 1
+	}
+
+	cfg, err := microsoft365auth.ConfigFromEnv()
 	if err != nil {
-		fmt.Fprintf(stderr, "collect auth provider error: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintf(stderr, "collect auth configuration error: %s\n", microsoft365auth.Redact(err.Error()))
+		return 1
+	}
+	provider, err := microsoft365auth.NewTokenProvider(cfg)
+	if err != nil {
+		fmt.Fprintf(stderr, "collect auth provider error: %s\n", microsoft365auth.Redact(err.Error()))
 		return 1
 	}
 
 	hc := httpclient.New("STANCE/" + version.Version)
-	gc := graph.NewClient("https://graph.microsoft.com", provider, hc)
-	bundle, err := collect.RunDefault(context.Background(), gc)
+	gc := microsoft365graph.NewClient("https://graph.microsoft.com", provider, hc)
+	bundle, err := microsoft365collect.RunDefault(context.Background(), gc)
 	if err != nil {
-		fmt.Fprintf(stderr, "collect failed: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintf(stderr, "collect failed: %s\n", microsoft365auth.Redact(err.Error()))
 		return 1
 	}
 
@@ -287,26 +312,26 @@ func runAuth(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	cfg, err := auth.ConfigFromEnv()
+	cfg, err := microsoft365auth.ConfigFromEnv()
 	if err != nil {
-		fmt.Fprintf(stderr, "auth configuration error: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintf(stderr, "auth configuration error: %s\n", microsoft365auth.Redact(err.Error()))
 		return 1
 	}
 
-	provider, err := auth.NewTokenProvider(cfg)
+	provider, err := microsoft365auth.NewTokenProvider(cfg)
 	if err != nil {
-		fmt.Fprintf(stderr, "auth provider error: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintf(stderr, "auth provider error: %s\n", microsoft365auth.Redact(err.Error()))
 		return 1
 	}
 
-	tester := auth.NewGraphTester(provider)
+	tester := microsoft365auth.NewGraphTester(provider)
 	result, err := tester.Test(context.Background())
 	if err != nil {
-		fmt.Fprintf(stderr, "auth test failed: %s\n", auth.Redact(err.Error()))
+		fmt.Fprintf(stderr, "auth test failed: %s\n", microsoft365auth.Redact(err.Error()))
 		return 1
 	}
 
-	fmt.Fprintf(stdout, "auth test ok: provider=%s tenant=%s status=%d\n", result.Provider, auth.RedactTenantID(result.TenantID), result.StatusCode)
+	fmt.Fprintf(stdout, "auth test ok: provider=%s tenant=%s status=%d\n", result.Provider, microsoft365auth.RedactTenantID(result.TenantID), result.StatusCode)
 	return 0
 }
 
@@ -337,15 +362,16 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  stance <command> [args]")
+	fmt.Fprintln(w, "  provider-aware commands default to --provider microsoft365")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Available commands:")
 	fmt.Fprintln(w, "  version      Print build and version information")
 	fmt.Fprintln(w, "  init         Create a local STANCE config scaffold")
 	fmt.Fprintln(w, "  auth test    Verify authentication against Graph")
-	fmt.Fprintln(w, "  collect      Collect tenant facts to JSON")
-	fmt.Fprintln(w, "  check        Evaluate checks from collected facts")
-	fmt.Fprintln(w, "  explain      Explain implemented checks")
-	fmt.Fprintln(w, "  permissions  Calculate required permissions")
+	fmt.Fprintln(w, "  collect      Collect tenant facts to JSON (--provider defaults to microsoft365)")
+	fmt.Fprintln(w, "  check        Evaluate checks from collected facts (--provider defaults to microsoft365)")
+	fmt.Fprintln(w, "  explain      Explain implemented checks (--provider defaults to microsoft365)")
+	fmt.Fprintln(w, "  permissions  Calculate required permissions (--provider defaults to microsoft365)")
 	fmt.Fprintln(w, "  report       (planned) Render reports from results")
 }
 
@@ -355,6 +381,7 @@ func defaultConfigFile() string {
 # v0.1 focus: Entra ID + Conditional Access (read-only).
 
 tenant_id: ""
+provider: "microsoft365"
 auth:
   mode: "oidc"
   # client credentials are fallback-only for local/dev flows.
@@ -365,4 +392,26 @@ collector:
 output:
   directory: "results"
 `) + "\n"
+}
+
+func parseProviderFlag(args []string) (string, []string, error) {
+	provider := defaultProvider
+	filtered := make([]string, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--provider" {
+			if i+1 >= len(args) {
+				return "", nil, errors.New("missing value for --provider")
+			}
+			provider = args[i+1]
+			i++
+			continue
+		}
+		filtered = append(filtered, args[i])
+	}
+
+	if provider == "" {
+		return "", nil, errors.New("provider cannot be empty")
+	}
+	return provider, filtered, nil
 }

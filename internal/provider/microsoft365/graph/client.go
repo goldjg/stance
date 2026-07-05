@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/goldjg/stance-365/internal/auth"
-	"github.com/goldjg/stance-365/internal/httpclient"
+	"github.com/goldjg/stance/internal/httpclient"
+	"github.com/goldjg/stance/internal/provider/microsoft365/auth"
 )
 
 type Client struct {

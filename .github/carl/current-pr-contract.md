@@ -6,6 +6,9 @@ Initial bootstrap implementation covering PR1-PR7 foundation work in one deliver
 ## Included
 - Go module initialization.
 - CLI surface with implemented `version`, `init`, `auth test`, `collect`, `check`, `permissions`, `explain`.
+- Provider-oriented architecture split:
+  - provider-neutral core packages under `internal/core/*`
+  - Microsoft 365 provider packages under `internal/provider/microsoft365/*`
 - cARL governance bootstrap in `.github/carl/`.
 - README project thesis, hard constraints, non-goals.
 - GitHub Actions CI with gofmt/test/vet.
