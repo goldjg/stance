@@ -396,6 +396,9 @@ func TestRunChecksDefaultText(t *testing.T) {
 	if !strings.Contains(out.String(), "ENTRA-ROLE-001") {
 		t.Fatalf("expected role checks output: %q", out.String())
 	}
+	if !strings.Contains(out.String(), "ENTRA-CA-006") || !strings.Contains(out.String(), "ENTRA-CA-008") {
+		t.Fatalf("expected privileged CA evidence checks output: %q", out.String())
+	}
 }
 
 func TestRunChecksSuiteFilter(t *testing.T) {

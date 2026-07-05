@@ -39,6 +39,16 @@ func TestForChecksRoleCheckPermissions(t *testing.T) {
 	}
 }
 
+func TestForChecksPrivilegedCAEvidencePermissions(t *testing.T) {
+	perms, err := Resolver{}.ForChecks([]string{"ENTRA-CA-006", "ENTRA-CA-007", "ENTRA-CA-008"})
+	if err != nil {
+		t.Fatalf("ForChecks returned error: %v", err)
+	}
+	if !containsPermission(perms, "Policy.Read.All") || !containsPermission(perms, "RoleManagement.Read.Directory") {
+		t.Fatalf("expected Policy.Read.All and RoleManagement.Read.Directory, got %v", perms)
+	}
+}
+
 func containsPermission(perms []string, target string) bool {
 	for _, p := range perms {
 		if p == target {

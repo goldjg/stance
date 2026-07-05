@@ -18,35 +18,45 @@ func TestEvaluateDefault(t *testing.T) {
 	}
 
 	result := EvaluateDefault(bundle)
-	if len(result.Findings) != 7 {
-		t.Fatalf("expected 7 findings, got %d", len(result.Findings))
+	if len(result.Findings) != 10 {
+		t.Fatalf("expected 10 findings, got %d", len(result.Findings))
 	}
-	if result.Findings[0].Status != coreeval.StatusFail {
-		t.Fatalf("expected first finding to fail, got %s", result.Findings[0].Status)
+	if findingByRuleID(result, "ENTRA-CA-001").Status != coreeval.StatusFail {
+		t.Fatalf("expected ENTRA-CA-001 to fail")
 	}
-	if result.Findings[1].Status != coreeval.StatusFail {
-		t.Fatalf("expected second finding to fail, got %s", result.Findings[1].Status)
+	if findingByRuleID(result, "ENTRA-CA-002").Status != coreeval.StatusFail {
+		t.Fatalf("expected ENTRA-CA-002 to fail")
 	}
-	if result.Findings[2].Status != coreeval.StatusInfo {
-		t.Fatalf("expected privileged detection to be info, got %s", result.Findings[2].Status)
+	if findingByRuleID(result, "ENTRA-CA-003").Status != coreeval.StatusInfo {
+		t.Fatalf("expected ENTRA-CA-003 to be info")
 	}
-	if result.Findings[3].Status != coreeval.StatusPass {
-		t.Fatalf("expected mfa/auth strength enforcement finding to pass, got %s", result.Findings[3].Status)
+	if findingByRuleID(result, "ENTRA-CA-004").Status != coreeval.StatusPass {
+		t.Fatalf("expected ENTRA-CA-004 to pass")
 	}
-	if result.Findings[4].Status != coreeval.StatusInfo {
-		t.Fatalf("expected exclusions finding to be informational, got %s", result.Findings[4].Status)
+	exclusions := findingByRuleID(result, "ENTRA-CA-005")
+	if exclusions.Status != coreeval.StatusInfo {
+		t.Fatalf("expected ENTRA-CA-005 to be info")
 	}
-	if result.Findings[4].Severity != corerules.SeverityLow {
-		t.Fatalf("expected exclusions finding severity low, got %s", result.Findings[4].Severity)
+	if exclusions.Severity != corerules.SeverityLow {
+		t.Fatalf("expected exclusions finding severity low, got %s", exclusions.Severity)
 	}
-	if result.Findings[4].Summary == "" || !strings.Contains(result.Findings[4].Summary, "not proof") {
-		t.Fatalf("expected cautious exclusion summary, got %q", result.Findings[4].Summary)
+	if exclusions.Summary == "" || !strings.Contains(exclusions.Summary, "not proof") {
+		t.Fatalf("expected cautious exclusion summary, got %q", exclusions.Summary)
 	}
-	if result.Findings[5].Status != coreeval.StatusInfo || !strings.Contains(result.Findings[5].Summary, "visibility evidence") {
-		t.Fatalf("expected role visibility finding to be info/cautious, got %+v", result.Findings[5])
+	if findingByRuleID(result, "ENTRA-CA-006").Status != coreeval.StatusInfo {
+		t.Fatalf("expected ENTRA-CA-006 to be info")
 	}
-	if result.Findings[6].Status != coreeval.StatusInfo {
-		t.Fatalf("expected incomplete principal details finding to be info, got %+v", result.Findings[6])
+	if findingByRuleID(result, "ENTRA-CA-007").Status != coreeval.StatusInfo {
+		t.Fatalf("expected ENTRA-CA-007 to be info")
+	}
+	if unknown := findingByRuleID(result, "ENTRA-CA-008"); unknown.Status != coreeval.StatusInfo || !strings.Contains(unknown.Summary, "unknown") {
+		t.Fatalf("expected ENTRA-CA-008 to be cautious info, got %+v", unknown)
+	}
+	if roleVisibility := findingByRuleID(result, "ENTRA-ROLE-001"); roleVisibility.Status != coreeval.StatusInfo || !strings.Contains(roleVisibility.Summary, "visibility evidence") {
+		t.Fatalf("expected role visibility finding to be info/cautious, got %+v", roleVisibility)
+	}
+	if roleCompleteness := findingByRuleID(result, "ENTRA-ROLE-002"); roleCompleteness.Status != coreeval.StatusInfo {
+		t.Fatalf("expected incomplete principal details finding to be info, got %+v", roleCompleteness)
 	}
 }
 
@@ -63,7 +73,7 @@ func TestEvaluateDefaultAuthStrengthCountsAsMFAEvidence(t *testing.T) {
 	}
 
 	result := EvaluateDefault(bundle)
-	if got := result.Findings[3].Status; got != coreeval.StatusPass {
+	if got := findingByRuleID(result, "ENTRA-CA-004").Status; got != coreeval.StatusPass {
 		t.Fatalf("expected ENTRA-CA-004 to pass when authentication strength is present, got %s", got)
 	}
 }
@@ -81,7 +91,7 @@ func TestEvaluateDefaultExcludedUsersAreInformationalOnly(t *testing.T) {
 	}
 
 	result := EvaluateDefault(bundle)
-	f := result.Findings[4]
+	f := findingByRuleID(result, "ENTRA-CA-005")
 	if f.Status != coreeval.StatusInfo {
 		t.Fatalf("expected informational status for exclusions evidence, got %s", f.Status)
 	}
@@ -114,13 +124,10 @@ func TestEvaluateDefaultRoleChecksWithCompletePrincipalDetails(t *testing.T) {
 		},
 	}
 	result := EvaluateDefault(bundle)
-	roleVisibility := result.Findings[5]
-	roleCompleteness := result.Findings[6]
+	roleVisibility := findingByRuleID(result, "ENTRA-ROLE-001")
+	roleCompleteness := findingByRuleID(result, "ENTRA-ROLE-002")
 	if roleVisibility.RuleID != "ENTRA-ROLE-001" {
-		t.Fatalf("expected ENTRA-ROLE-001 in slot 6, got %s", roleVisibility.RuleID)
-	}
-	if roleCompleteness.RuleID != "ENTRA-ROLE-002" {
-		t.Fatalf("expected ENTRA-ROLE-002 in slot 7, got %s", roleCompleteness.RuleID)
+		t.Fatalf("expected ENTRA-ROLE-001 finding, got %+v", roleVisibility)
 	}
 	if !strings.Contains(roleCompleteness.Summary, "included principal display details") {
 		t.Fatalf("expected complete principal summary, got %q", roleCompleteness.Summary)
@@ -141,14 +148,57 @@ func TestEvaluateDefaultRoleChecksWithMissingPrincipalDetails(t *testing.T) {
 		},
 	}
 	result := EvaluateDefault(bundle)
-	roleCompleteness := result.Findings[6]
-	if roleCompleteness.RuleID != "ENTRA-ROLE-002" {
-		t.Fatalf("expected ENTRA-ROLE-002, got %s", roleCompleteness.RuleID)
-	}
+	roleCompleteness := findingByRuleID(result, "ENTRA-ROLE-002")
 	if !strings.Contains(roleCompleteness.Summary, "incomplete principal details") {
 		t.Fatalf("expected incomplete principal caution summary, got %q", roleCompleteness.Summary)
 	}
 	if len(roleCompleteness.MatchedItems) != 1 || roleCompleteness.MatchedItems[0] != "assign-1" {
 		t.Fatalf("expected assignment id evidence, got %#v", roleCompleteness.MatchedItems)
 	}
+}
+
+func TestEvaluateDefaultPrivilegedCAEvidenceChecksStayCautious(t *testing.T) {
+	bundle := facts.Bundle{
+		CAPolicies: []facts.CAPolicyFact{
+			{
+				ID:              "policy-1",
+				DisplayName:     "Privileged role MFA",
+				State:           "enabled",
+				IncludedRoles:   []string{"role-1"},
+				ExcludedUsers:   []string{"user-a"},
+				BuiltInControls: []string{"mfa"},
+			},
+		},
+		PrivilegedPrincipals: []facts.PrivilegedPrincipal{
+			{
+				PrincipalID:       "principal-1",
+				DisplayName:       "Alice",
+				RoleDefinitionIDs: []string{"role-1"},
+			},
+		},
+	}
+	result := EvaluateDefault(bundle)
+
+	coverage := findingByRuleID(result, "ENTRA-CA-006")
+	exclusions := findingByRuleID(result, "ENTRA-CA-007")
+	unknown := findingByRuleID(result, "ENTRA-CA-008")
+
+	if coverage.Status != coreeval.StatusInfo || !strings.Contains(coverage.Summary, "does not prove") {
+		t.Fatalf("expected cautious ENTRA-CA-006 summary, got %+v", coverage)
+	}
+	if exclusions.Status != coreeval.StatusInfo || !strings.Contains(exclusions.Summary, "does not assert emergency-access") {
+		t.Fatalf("expected cautious ENTRA-CA-007 summary, got %+v", exclusions)
+	}
+	if unknown.Status != coreeval.StatusInfo || !strings.Contains(unknown.Summary, "not yet implemented") {
+		t.Fatalf("expected cautious ENTRA-CA-008 summary, got %+v", unknown)
+	}
+}
+
+func findingByRuleID(result coreeval.Result, ruleID string) coreeval.Finding {
+	for _, finding := range result.Findings {
+		if finding.RuleID == ruleID {
+			return finding
+		}
+	}
+	return coreeval.Finding{}
 }

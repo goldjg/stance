@@ -1,6 +1,10 @@
 package catalog
 
-import "testing"
+import (
+	"testing"
+
+	corecatalog "github.com/goldjg/stance/internal/core/catalog"
+)
 
 func TestProvider(t *testing.T) {
 	provider := Provider()
@@ -21,15 +25,15 @@ func TestSuitesIncludesEntra(t *testing.T) {
 	if suite.ID != "entra" {
 		t.Fatalf("expected entra suite, got %s", suite.ID)
 	}
-	if suite.CheckCount != 7 {
-		t.Fatalf("expected 7 checks in entra suite, got %d", suite.CheckCount)
+	if suite.CheckCount != 10 {
+		t.Fatalf("expected 10 checks in entra suite, got %d", suite.CheckCount)
 	}
 }
 
 func TestChecksFromRuleMetadata(t *testing.T) {
 	checks := Checks()
-	if len(checks) != 7 {
-		t.Fatalf("expected 7 checks, got %d", len(checks))
+	if len(checks) != 10 {
+		t.Fatalf("expected 10 checks, got %d", len(checks))
 	}
 
 	first := checks[0]
@@ -42,4 +46,22 @@ func TestChecksFromRuleMetadata(t *testing.T) {
 	if len(first.RequiredPermissions) == 0 || first.RequiredPermissions[0] != "Policy.Read.All" {
 		t.Fatalf("unexpected required permissions: %#v", first.RequiredPermissions)
 	}
+	if _, ok := findCheckByID(checks, "ENTRA-CA-006"); !ok {
+		t.Fatalf("expected ENTRA-CA-006 in catalog")
+	}
+	if _, ok := findCheckByID(checks, "ENTRA-CA-007"); !ok {
+		t.Fatalf("expected ENTRA-CA-007 in catalog")
+	}
+	if _, ok := findCheckByID(checks, "ENTRA-CA-008"); !ok {
+		t.Fatalf("expected ENTRA-CA-008 in catalog")
+	}
+}
+
+func findCheckByID(checks []corecatalog.CheckInfo, id string) (corecatalog.CheckInfo, bool) {
+	for _, check := range checks {
+		if check.ID == id {
+			return check, true
+		}
+	}
+	return corecatalog.CheckInfo{}, false
 }

@@ -1,27 +1,31 @@
 # Current PR contract
 
 ## PR focus
-Expand the Microsoft 365 Entra directory role collector foundation.
+Add cautious privileged principal Conditional Access evidence evaluation.
 
 ## Included
-- Add Microsoft 365 role definition/assignment fact models under `internal/provider/microsoft365/facts`.
-- Add direct Graph collection for Entra directory role definitions and assignments.
-- Derive privileged principal facts from role assignments.
-- Integrate role facts into the Microsoft 365 fact bundle and default collection flow.
-- Add cautious role visibility checks:
-  - `ENTRA-ROLE-001`
-  - `ENTRA-ROLE-002`
-- Update check catalog/suite listing and permissions output for role collection scope.
+- Add Microsoft 365 privileged CA evidence model/helper under `internal/provider/microsoft365/eval`.
+- Derive cautious privileged-principal CA evidence from existing facts:
+  - conditional access policies
+  - directory role assignments
+  - privileged principals
+- Add cautious privileged CA evidence checks:
+  - `ENTRA-CA-006`
+  - `ENTRA-CA-007`
+  - `ENTRA-CA-008`
+- Update evaluator/catalog metadata and check discovery output.
 - Update docs and governance artifacts:
   - `README.md`
   - `docs/maester-parity.md`
   - `.github/carl/memory.md`
   - `.github/carl/current-pr-contract.md`
-- Add/update tests for collector mapping, derivation, evaluator behavior, catalog/permissions, CLI output, and report compatibility.
+- Add/update tests for evidence derivation, cautious check behavior, catalog/CLI discovery, and report/SARIF compatibility.
 
 ## Excluded
+- New collectors or Graph endpoint additions.
+- Graph group expansion (including nested/dynamic groups).
 - Emergency-access/break-glass pass/fail logic.
-- Full Conditional Access coverage analysis for privileged principals.
+- Full effective Conditional Access simulation or What-If parity.
 - Non-Entra workload expansion (Exchange, SharePoint, Teams, Defender, Purview).
 - Remediation/write actions.
 - New providers.
