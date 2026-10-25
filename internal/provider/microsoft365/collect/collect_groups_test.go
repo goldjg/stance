@@ -28,7 +28,7 @@ func TestMapDirectPrincipalGroupMembershipIgnoresNonGroupObjects(t *testing.T) {
 
 func TestCollectDirectGroupMembershipsForPrincipalPaginates(t *testing.T) {
 	var serverURL string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/directoryObjects/principal-1/memberOf":
 			_, _ = w.Write([]byte(`{"value":[{"id":"group-1","@odata.type":"#microsoft.graph.group","displayName":"Admins"}],"@odata.nextLink":"` + serverURL + `/page2"}`))
@@ -60,7 +60,7 @@ func TestCollectDirectGroupMembershipsForPrincipalPaginates(t *testing.T) {
 }
 
 func TestPrivilegedPrincipalGroupMembershipCollectorContinuesOnPrincipalFailure(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/directoryObjects/principal-ok/memberOf":
 			_, _ = w.Write([]byte(`{"value":[{"id":"group-1","@odata.type":"#microsoft.graph.group","displayName":"Admins"}]}`))
@@ -114,7 +114,7 @@ func TestPrivilegedPrincipalGroupMembershipCollectorContinuesOnPrincipalFailure(
 }
 
 func TestPrivilegedPrincipalGroupMembershipCollectorRecordsDecodeErrorAndContinues(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/directoryObjects/principal-decode/memberOf":
 			_, _ = w.Write([]byte(`{"value":[{"id":"group-1","@odata.type":"#microsoft.graph.group","displayName":`))
