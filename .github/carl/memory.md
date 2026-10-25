@@ -44,6 +44,7 @@
 - `stance check --format json` emits the durable STANCE result document as handoff format to `stance report`.
 - SARIF output (`--format sarif`) is implemented for both `stance check` and `stance report`.
 - STANCE release packaging uses GoReleaser v2 with project-specific release/distribution configuration.
+- Source builds require Go 1.26.10 or later. CI/release pins stay on patched Go 1.26 to retain macOS 12 support and must be updated with `go.mod`; compiler verification and `GOTOOLCHAIN=local` prevent release fallback. Published binaries need rebuilding for standard-library fixes.
 - Tagged `v*` releases publish cross-platform STANCE CLI artefacts (linux/darwin/windows amd64, plus linux/darwin arm64).
 - Linux native packages (`deb`, `rpm`, `apk`) are generated via GoReleaser nFPM config.
 - Homebrew cask publishing targets `goldjg/homebrew-stance` via `HOMEBREW_TAP_GITHUB_TOKEN`.
