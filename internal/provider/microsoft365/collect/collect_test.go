@@ -46,7 +46,7 @@ func TestMapCAPolicyFromFixture(t *testing.T) {
 
 func TestRunDefaultCollectsOrganizationAndPolicies(t *testing.T) {
 	var hitOrg, hitCA, hitRoleDefs, hitRoleAssignments, hitPrincipal, hitPrincipalGroups bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/organization":
 			hitOrg = true

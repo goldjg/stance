@@ -63,6 +63,10 @@ func (c *Client) CollectPaginated(ctx context.Context, path string) ([]json.RawM
 }
 
 func (c *Client) get(ctx context.Context, path string) ([]byte, error) {
+	fullURL, err := c.resolveURL(path)
+	if err != nil {
+		return nil, err
+	}
 	if c.tokenProvider == nil {
 		return nil, fmt.Errorf("token provider is required")
 	}
@@ -71,10 +75,6 @@ func (c *Client) get(ctx context.Context, path string) ([]byte, error) {
 		return nil, err
 	}
 
-	fullURL, err := c.resolveURL(path)
-	if err != nil {
-		return nil, err
-	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,12 @@ func (c *Client) get(ctx context.Context, path string) ([]byte, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+tok.AccessToken)
 
-	resp, err := c.httpClient.Do(ctx, req)
+	resp, err := c.httpClient.DoWithRedirectCheck(ctx, req, func(redirectReq *http.Request) error {
+		if !c.isAuthorizedURL(redirectReq.URL) {
+			return fmt.Errorf("graph redirect rejected: destination is outside the configured Graph origin")
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -102,19 +107,66 @@ func (c *Client) resolveURL(path string) (string, error) {
 	if p == "" {
 		return "", fmt.Errorf("path is required")
 	}
-	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
-		return p, nil
-	}
 	base, err := url.Parse(c.baseURL)
+	if err != nil || !validGraphURL(base) {
+		return "", fmt.Errorf("configured Graph endpoint must be an HTTPS URL with a valid origin")
+	}
+
+	parsed, err := url.Parse(p)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid Graph request URL")
 	}
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
+	var target *url.URL
+	if parsed.IsAbs() || parsed.Host != "" {
+		target = parsed
+	} else {
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		rel, parseErr := url.Parse(p)
+		if parseErr != nil {
+			return "", fmt.Errorf("invalid Graph request URL")
+		}
+		target = base.ResolveReference(rel)
 	}
-	rel, err := url.Parse(p)
-	if err != nil {
-		return "", err
+	if !validGraphURL(target) {
+		return "", fmt.Errorf("Graph request URL must use HTTPS and the configured Graph origin")
 	}
-	return base.ResolveReference(rel).String(), nil
+	if !sameOrigin(base, target) {
+		return "", fmt.Errorf("Graph request URL is outside the configured Graph origin")
+	}
+	return target.String(), nil
+}
+
+func (c *Client) isAuthorizedURL(target *url.URL) bool {
+	base, err := url.Parse(c.baseURL)
+	return err == nil && validGraphURL(base) && validGraphURL(target) && sameOrigin(base, target)
+}
+
+func validGraphURL(u *url.URL) bool {
+	return u != nil && strings.EqualFold(u.Scheme, "https") && u.Hostname() != "" && !strings.HasSuffix(u.Host, ":") && u.User == nil && u.Opaque == "" && u.Fragment == "" && validPort(u)
+}
+
+func validPort(u *url.URL) bool {
+	port := u.Port()
+	if port == "" {
+		return true
+	}
+	for _, r := range port {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func sameOrigin(a, b *url.URL) bool {
+	return strings.EqualFold(a.Hostname(), b.Hostname()) && effectivePort(a) == effectivePort(b)
+}
+
+func effectivePort(u *url.URL) string {
+	if port := u.Port(); port != "" {
+		return port
+	}
+	return "443"
 }

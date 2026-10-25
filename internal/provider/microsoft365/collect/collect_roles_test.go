@@ -59,7 +59,7 @@ func TestDerivePrivilegedPrincipals(t *testing.T) {
 
 func TestDirectoryRoleCollectorKeepsPartialFactsWhenPrincipalLookupFails(t *testing.T) {
 	var hitAssignments bool
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/roleManagement/directory/roleDefinitions":
 			_, _ = w.Write([]byte(`{"value":[{"id":"role-1","displayName":"Global Administrator"}]}`))
@@ -98,7 +98,7 @@ func TestDirectoryRoleCollectorKeepsPartialFactsWhenPrincipalLookupFails(t *test
 
 func TestCollectDirectoryRoleDefinitionsPaginates(t *testing.T) {
 	var serverURL string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1.0/roleManagement/directory/roleDefinitions":
 			_, _ = w.Write([]byte(`{"value":[{"id":"role-1","displayName":"Global Administrator"}],"@odata.nextLink":"` + serverURL + `/page2"}`))

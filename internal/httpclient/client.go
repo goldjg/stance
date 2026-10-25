@@ -38,6 +38,17 @@ func (c *Client) WithHTTPClient(hc *http.Client) *Client {
 }
 
 func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	return c.do(ctx, req, nil)
+}
+
+// DoWithRedirectCheck performs a request while validating each redirect before
+// the redirected request is sent. The check runs in addition to any
+// CheckRedirect policy configured on the underlying HTTP client.
+func (c *Client) DoWithRedirectCheck(ctx context.Context, req *http.Request, check func(*http.Request) error) (*http.Response, error) {
+	return c.do(ctx, req, check)
+}
+
+func (c *Client) do(ctx context.Context, req *http.Request, check func(*http.Request) error) (*http.Response, error) {
 	if req == nil {
 		return nil, errors.New("request is required")
 	}
@@ -51,7 +62,25 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 			r.Header.Set("User-Agent", c.userAgent)
 		}
 
-		resp, err = c.httpClient.Do(r)
+		hc := c.httpClient
+		if check != nil {
+			hcCopy := *c.httpClient
+			previousCheck := hcCopy.CheckRedirect
+			hcCopy.CheckRedirect = func(redirectReq *http.Request, via []*http.Request) error {
+				if err := check(redirectReq); err != nil {
+					return err
+				}
+				if previousCheck != nil {
+					return previousCheck(redirectReq, via)
+				}
+				if len(via) >= 10 {
+					return errors.New("stopped after 10 redirects")
+				}
+				return nil
+			}
+			hc = &hcCopy
+		}
+		resp, err = hc.Do(r)
 		if err != nil {
 			if attempt == c.maxRetries {
 				return nil, err
