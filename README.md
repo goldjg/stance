@@ -105,7 +105,7 @@ when required secrets and repositories are present.
 - WinGet configured path (token-gated workflow submission):
   - `winget install goldjg.STANCE`
 
-Build from source:
+Build from source (requires Go 1.26.10 or later):
 
 ```sh
 go install github.com/goldjg/stance/cmd/stance@latest

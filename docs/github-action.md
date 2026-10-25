@@ -127,6 +127,11 @@ Facts-only mode remains auth-free.
 
 ## Local dogfooding example (`uses: ./`)
 
+Local source mode requires Go 1.26.10 or later. The `go-version-file: go.mod`
+examples below select the patch-level minimum from the checked-out STANCE
+source. Released-binary mode does not recompile or patch an older release;
+select a release built with a patched compiler.
+
 ```yaml
 permissions:
   contents: read

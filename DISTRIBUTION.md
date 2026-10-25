@@ -118,9 +118,41 @@ optional/token-gated.
 
 ## Build from source
 
+Requires Go 1.26.10 or later:
+
 ```sh
 go install github.com/goldjg/stance/cmd/stance@latest
 ```
+
+### Compiler security baseline
+
+CI and release workflows pin Go 1.26.10 and verify the selected compiler before
+building. `GOTOOLCHAIN=local` prevents implicit toolchain switching in those
+workflows and in GoReleaser builds. Local GoReleaser runs require the selected
+Go 1.26.10 compiler on `PATH`; ordinary source builds may use automatic toolchain
+download. The patch-level `go` directive is the enforced source-build minimum;
+a redundant `toolchain` suggestion is not needed.
+
+Go 1.26.10 includes the `crypto/x509` fix for
+[CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809)
+and earlier standard-library security fixes, including those in Go 1.26.9.
+A newer major is not automatically patched: Go 1.27 needs at least 1.27.3.
+When updating the baseline, update `go.mod` and both workflow `GO_VERSION`
+pins together and revalidate every supported target.
+
+The Go 1.26 line is intentionally retained for macOS 12 Monterey compatibility;
+Go 1.27 requires macOS 13 Ventura. Release targets remain Linux/macOS amd64
+and arm64, plus Windows amd64, with CGO disabled. Go 1.26 requires Linux kernel
+3.2+, Windows 10+/Server 2016+, and macOS 12+. Older source compilers and legacy
+OS versions supported by Go 1.19 are no longer supported. Building locally
+with a newer Go major may raise its OS minimum; use the release baseline when
+macOS 12 compatibility is required.
+
+Changing source requirements does not patch previously compiled binaries.
+Release archives, native packages, Homebrew/WinGet installations, cached action
+binaries, and internal mirrors need a newly built release. No GitHub Releases
+were present at the time of this upgrade. Check an extracted binary's actual
+compiler with `go version -m /path/to/stance`.
 
 ## Enterprise mirroring guidance
 

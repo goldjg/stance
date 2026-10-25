@@ -12,6 +12,7 @@ project_name: stance
 
 before:
   hooks:
+    - go version
     - go mod verify
 
 builds:
@@ -20,6 +21,7 @@ builds:
     binary: stance
     env:
       - CGO_ENABLED=0
+      - GOTOOLCHAIN=local
     goos:
       - linux
       - windows
